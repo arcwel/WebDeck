@@ -41,7 +41,11 @@ import { pictureInPicture } from '../../../webui/shell'
 const PRESETS: { id: DeckPreset; label: string; hint: string }[] = [
   { id: 'browsing', label: 'Browsing', hint: 'Deck hidden — just the web' },
   { id: 'building', label: 'Building', hint: 'Editor & files beside the page' },
-  { id: 'debugging', label: 'Debugging', hint: 'Terminals, logs & agents forward' }
+  {
+    id: 'debugging',
+    label: 'Debugging',
+    hint: 'Files left, debugger beside the editor, logs forward'
+  }
 ]
 
 /** Turn address-bar input into a navigable URL (or a search query). The

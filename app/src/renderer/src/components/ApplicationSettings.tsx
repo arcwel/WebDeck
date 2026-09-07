@@ -168,6 +168,10 @@ export function ApplicationSettings(): React.JSX.Element {
         <ProfilePicture settings={settings} onChange={setSettings} />
       </Section>
 
+      <Section title="Start page">
+        <StartPageSites />
+      </Section>
+
       <Section title="Import browsing history">
         <ImportHistory />
       </Section>
@@ -360,6 +364,66 @@ function Section({
       </h3>
       {children}
     </section>
+  )
+}
+
+/**
+ * The sites the start page shows, as the user chose them.
+ *
+ * The choosing happens on the start page itself — hover a tile to hide or
+ * unpin it, or add one — and this is the ledger: every pin and every hidden
+ * site, each undoable here, so a site hidden by a stray click can be brought
+ * back without knowing its address.
+ */
+function StartPageSites(): React.JSX.Element {
+  const startSites = useShellStore((s) => s.startSites)
+  const unpinStartSite = useShellStore((s) => s.unpinStartSite)
+  const unhideStartSite = useShellStore((s) => s.unhideStartSite)
+  const host = (url: string): string => {
+    try {
+      return new URL(url).host.replace(/^www\./, '')
+    } catch {
+      return url
+    }
+  }
+  const row = (url: string, action: string, onClick: () => void): React.JSX.Element => (
+    <div
+      key={url}
+      className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-[var(--wd-hover)]"
+    >
+      <span className="min-w-0 flex-1 truncate text-[var(--wd-text)]" title={url}>
+        {host(url)}
+      </span>
+      <button
+        onClick={onClick}
+        className="rounded border border-[var(--wd-border)] px-2 py-0.5 text-[11px] text-[var(--wd-dim)] hover:text-[var(--wd-text)]"
+      >
+        {action}
+      </button>
+    </div>
+  )
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="px-2 text-[11px] text-[var(--wd-dim)]">
+        The start page shows the sites you pin, then the ones you visit most. Hover a site there to
+        hide or unpin it, or use its + tile to add one.
+      </p>
+      {startSites.pinned.length > 0 && (
+        <div className="px-2 pt-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--wd-dim)]">
+          Pinned
+        </div>
+      )}
+      {startSites.pinned.map((p) => row(p.url, 'Unpin', () => unpinStartSite(p.url)))}
+      {startSites.hidden.length > 0 && (
+        <div className="px-2 pt-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--wd-dim)]">
+          Hidden
+        </div>
+      )}
+      {startSites.hidden.map((url) => row(url, 'Show again', () => unhideStartSite(url)))}
+      {startSites.pinned.length === 0 && startSites.hidden.length === 0 && (
+        <div className="px-2 text-[11px] text-[var(--wd-dim)]">Nothing pinned or hidden yet.</div>
+      )}
+    </div>
   )
 }
 

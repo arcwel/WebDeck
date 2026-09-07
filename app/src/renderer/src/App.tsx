@@ -13,7 +13,7 @@ import { SnapshotPanel } from '@/components/SnapshotPanel'
 import { CommandPalette } from '@/components/CommandPalette'
 import { TabSwitcher } from '@/components/TabSwitcher'
 import { ToastHost } from '@/components/ToastHost'
-import { useShellStore } from '@/store'
+import { useShellStore, effectiveLeftWidth } from '@/store'
 import { useThemeEffect } from '@/theme'
 import { useShortcut } from '@/shortcuts'
 import { runMenuCommand, useAppCommands } from '@/commands'
@@ -294,6 +294,8 @@ export default function App(): React.JSX.Element {
         className={`workspace ${revealed ? 'revealed' : ''} ${hasRail ? 'has-rail' : ''} ${
           dockEmpty ? 'dock-empty' : ''
         } ${leftEmpty ? 'left-empty' : ''} ${tabRail ? 'has-tabrail' : ''} ${
+          deckSizes.corners?.left === 'column' ? 'left-corner-column' : ''
+        } ${deckSizes.corners?.right === 'column' ? 'right-corner-column' : ''} ${
           assistantOpen ? 'has-assistant' : ''
         } ${blockDragging ? 'dragging-block' : ''}`}
         style={
@@ -302,7 +304,7 @@ export default function App(): React.JSX.Element {
             // Computed here, not in CSS: these are inline custom properties, so
             // a `.dock-empty` class rule would lose to them on specificity and
             // the stage would keep reserving space for a dock that isn't there.
-            '--deck-left-w': `${leftEmpty ? 0 : deckSizes.leftWidth || 320}px`,
+            '--deck-left-w': `${leftEmpty ? 0 : effectiveLeftWidth(deckSizes)}px`,
             // -12px cancels the 12px gutter, so an empty dock costs nothing.
             '--deck-dock-h': `${dockEmpty ? -12 : deckSizes.dockHeight}px`
           } as React.CSSProperties

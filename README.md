@@ -53,6 +53,7 @@ Three things follow from that ordering:
 
 - <kbd>⌘D</kbd> retreats the page into a spotlit stage and docks your blocks around it: a right column, a bottom dock, a left column and a collapsed rail.
 - Every block is a peer: drag into stacks, split out, **float into its own window**, or **detach the whole Deck into a second window**. Blocks fit their zone or become a tab in a stack; they never overlap.
+- Every zone is yours to size: drag the edge of the left column, the right column or the bottom dock. Each bottom corner has a toggle at its junction, so the dock can run the full width under a column, or the column can stand full height beside the dock, set per side.
 - Layouts persist per project, with **Browsing**, **Building** and **Debugging** presets.
 - Blocks: **Agent · Editor · Files · Terminal · Source Control · Git Graph · Debug · Tasks · Search · Preview · Notebook · REST client · Database · Page Assistant · Extensions · Settings**, plus any **extension view** as its own block.
 
@@ -286,19 +287,20 @@ The shell page owns the window and streams the stage rectangle to the browser; C
 
 ## Documentation
 
-| Document                                                                                                        | Read it when                                                         |
-| :-------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------- |
-| [Getting Started](docs/getting-started.md)                                                                      | You have just installed it                                           |
-| [Agent Workflows](docs/agent-workflows.md) · [Permission Modes](docs/permission-modes.md)                       | You are giving the agent work                                        |
-| [Document Studio](docs/document-studio.md) · [Settings Sync](docs/settings-sync.md)                             | You want the rendered docs or the same setup on two machines         |
-| [`PRD.md`](PRD.md) · [`ROADMAP.md`](ROADMAP.md)                                                                 | You want to know what it is for and where it is going                |
-| [`DESIGN.md`](DESIGN.md)                                                                                        | You are changing how the Deck looks or moves                         |
-| [`IDE_FOUNDATION.md`](IDE_FOUNDATION.md)                                                                        | You are touching the editor, LSP or DAP                              |
-| [`SECURITY.md`](SECURITY.md)                                                                                    | You are touching the agent, the policy gate or a process boundary    |
-| [`chromium/README.md`](chromium/README.md) · [`chromium/SHELL_ARCHITECTURE.md`](chromium/SHELL_ARCHITECTURE.md) | You are working on the fork or the Shell interface                   |
-| [`chromium/RELEASING.md`](chromium/RELEASING.md) · [`chromium/SHIPPABLE.md`](chromium/SHIPPABLE.md)             | You are cutting a release                                            |
-| [`CHANGELOG.md`](CHANGELOG.md)                                                                                  | You want to know what changed                                        |
-| [`sync/README.md`](sync/README.md)                                                                              | You want to run the sync or identity service, or change the protocol |
+| Document                                                                                                        | Read it when                                                           |
+| :-------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------- |
+| [Getting Started](docs/getting-started.md)                                                                      | You have just installed it                                             |
+| [Agent Workflows](docs/agent-workflows.md) · [Permission Modes](docs/permission-modes.md)                       | You are giving the agent work                                          |
+| [Document Studio](docs/document-studio.md) · [Settings Sync](docs/settings-sync.md)                             | You want the rendered docs or the same setup on two machines           |
+| [Devices plan](docs/device-sync-plan.md)                                                                        | Tabs from your other devices, and sending things between them (a plan) |
+| [`PRD.md`](PRD.md) · [`ROADMAP.md`](ROADMAP.md)                                                                 | You want to know what it is for and where it is going                  |
+| [`DESIGN.md`](DESIGN.md)                                                                                        | You are changing how the Deck looks or moves                           |
+| [`IDE_FOUNDATION.md`](IDE_FOUNDATION.md)                                                                        | You are touching the editor, LSP or DAP                                |
+| [`SECURITY.md`](SECURITY.md)                                                                                    | You are touching the agent, the policy gate or a process boundary      |
+| [`chromium/README.md`](chromium/README.md) · [`chromium/SHELL_ARCHITECTURE.md`](chromium/SHELL_ARCHITECTURE.md) | You are working on the fork or the Shell interface                     |
+| [`chromium/RELEASING.md`](chromium/RELEASING.md) · [`chromium/SHIPPABLE.md`](chromium/SHIPPABLE.md)             | You are cutting a release                                              |
+| [`CHANGELOG.md`](CHANGELOG.md)                                                                                  | You want to know what changed                                          |
+| [`sync/README.md`](sync/README.md)                                                                              | You want to run the sync or identity service, or change the protocol   |
 
 ## Contributing
 

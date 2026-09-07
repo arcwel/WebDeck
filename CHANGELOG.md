@@ -5,6 +5,36 @@ All notable changes to Arcwel WebDeck are recorded here. This project adheres to
 
 ## Unreleased
 
+### Added (start page, Deck presets, one surface at a time)
+
+- **The start page shows real site icons**, from the profile's own favicon
+  database through Chromium's `chrome://favicon2` source, registered for the
+  page. No icon ever comes from the network on the page's behalf.
+- **You choose the sites on the start page.** Hover a tile to hide it or unpin
+  it, add one with the + tile, and see and undo every pin and hidden site under
+  Settings → WebDeck → Start page. Pins come first, the most visited fill the
+  rest, and the choice is kept per profile.
+- **The Debugging preset is its own arrangement**: files in the left column,
+  the debugger beside the editor, and the bottom dock as evidence — logs first
+  and on their own, then the terminal, then the agent. It used to be Building
+  with a logs tab.
+- **The Ask panel and the Dev Deck no longer share a window.** Opening Ask
+  folds an attached Deck away, and the Deck coming forward — ⌘D, a preset, a
+  file opening into the editor — closes Ask. A Deck popped out into its own
+  window and Ask coexist.
+- **Each bottom corner of the Deck has an owner you choose.** By default the
+  dock runs the full width, so the dead square under the left column is gone.
+  A toggle at each junction lets that column stand full height beside the dock
+  instead, set per side, so a tall file tree and a wide log can coexist.
+- **Every Deck zone resizes by dragging its edge**, not only the bottom dock.
+  The side handles were positioned inside the stage, where the page's native
+  view covers them, so they could only be grabbed over the start page. Each
+  handle now sits in the gutter beside its zone, is faintly visible at rest,
+  and never overlaps the stage.
+- A plan for tabs from other devices and sending links and files between
+  them, on the sync service that exists and an Iroh-based transport after
+  DashBeam's design: `docs/device-sync-plan.md`.
+
 ### Fixed (file drops, editor boot, local test builds)
 
 - **Dropping a file on the page now opens it.** The shell claimed dropped

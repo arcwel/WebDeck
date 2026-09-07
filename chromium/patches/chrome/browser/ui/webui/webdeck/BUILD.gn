@@ -55,6 +55,9 @@ source_set("impl") {
     # account behind the profile button.
     "//chrome/browser/extensions",
     "//chrome/browser/ui/toolbar",
+    # Start-page site icons (chrome://favicon2).
+    "//chrome/browser/ui/webui:favicon_source",
+    "//components/favicon_base",
     "//components/sessions:session_id",
     "//components/signin/public/identity_manager",
     "//extensions/browser",

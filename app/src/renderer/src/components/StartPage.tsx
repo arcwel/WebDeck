@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AppInfo, RecentProject } from '@shared/ipc'
 import { useShellStore } from '@/store'
 import { navigateTab, toNavigableUrl } from '@/components/Toolbar'
+import { hostLabel, normalizeSiteInput, startPageTiles } from '@/start-sites'
 
 /**
  * The new-tab page: a browser's start page first, a project opener second.
@@ -22,6 +23,13 @@ export function StartPage(): React.JSX.Element {
   const workspace = useShellStore((s) => s.workspace)
   const history = useShellStore((s) => s.history)
   const bookmarks = useShellStore((s) => s.bookmarks)
+  const startSites = useShellStore((s) => s.startSites)
+  const pinStartSite = useShellStore((s) => s.pinStartSite)
+  const unpinStartSite = useShellStore((s) => s.unpinStartSite)
+  const hideStartSite = useShellStore((s) => s.hideStartSite)
+  const [addingSite, setAddingSite] = useState(false)
+  const [newSite, setNewSite] = useState('')
+  const [newSiteError, setNewSiteError] = useState('')
   const [recent, setRecent] = useState<RecentProject[]>([])
   const [info, setInfo] = useState<AppInfo | null>(null)
   const [query, setQuery] = useState('')
@@ -40,13 +48,19 @@ export function StartPage(): React.JSX.Element {
     searchRef.current?.focus()
   }, [activeTabId])
 
-  const topSites = useMemo(
-    () =>
-      [...history]
-        .sort((a, b) => b.visitCount - a.visitCount || b.lastVisit - a.lastVisit)
-        .slice(0, TOP_SITES),
-    [history]
-  )
+  const tiles = useMemo(() => startPageTiles(startSites, history, TOP_SITES), [startSites, history])
+
+  const addSite = (): void => {
+    const url = normalizeSiteInput(newSite)
+    if (!url) {
+      setNewSiteError('Enter a web address, like example.com.')
+      return
+    }
+    pinStartSite(url)
+    setNewSite('')
+    setNewSiteError('')
+    setAddingSite(false)
+  }
   const fresh = history.length === 0 && recent.length === 0 && !workspace
   const canPick = window.agweb.host.canPickPaths
 
@@ -131,32 +145,84 @@ export function StartPage(): React.JSX.Element {
           />
         </form>
 
-        {topSites.length > 0 && (
-          <div
-            className="mt-8 grid w-full grid-cols-4 gap-3 sm:grid-cols-8"
-            data-testid="start-top-sites"
-          >
-            {topSites.map((site) => (
+        {/* The sites: pinned first, then the most visited, each with a hide or
+            unpin control on hover, and a tile to add one. These are the user's
+            to choose (start-sites.ts); history only fills what the pins leave. */}
+        <div
+          className="mt-8 flex w-full flex-wrap justify-center gap-3"
+          data-testid="start-top-sites"
+        >
+          {tiles.map((site) => (
+            <div key={site.url} className="group relative w-[76px]">
               <button
-                key={site.url}
                 onClick={() => void navigateTab(activeTabId, site.url)}
                 title={site.url}
-                className="flex flex-col items-center gap-2 rounded-xl px-1 py-3 hover:bg-slate-200/70 dark:hover:bg-slate-800/70"
+                className="flex w-full flex-col items-center gap-2 rounded-xl px-1 py-3 hover:bg-slate-200/70 dark:hover:bg-slate-800/70"
               >
                 <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-sm font-semibold text-slate-600 shadow-sm dark:bg-slate-800 dark:text-slate-200">
-                  {site.favicon ? (
-                    <img src={site.favicon} alt="" width={20} height={20} />
-                  ) : (
-                    (hostLabel(site.url)[0] ?? '?').toUpperCase()
-                  )}
+                  <SiteIcon url={site.url} favicon={site.favicon} />
                 </span>
                 <span className="w-full truncate text-center text-[11px] text-slate-600 dark:text-slate-300">
                   {site.title || hostLabel(site.url)}
                 </span>
               </button>
-            ))}
-          </div>
+              <button
+                onClick={() => (site.pinned ? unpinStartSite(site.url) : hideStartSite(site.url))}
+                aria-label={
+                  site.pinned
+                    ? `Unpin ${hostLabel(site.url)}`
+                    : `Hide ${hostLabel(site.url)} from the start page`
+                }
+                title={site.pinned ? 'Unpin' : 'Hide from the start page'}
+                className="absolute right-1 top-1 hidden h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-[11px] leading-none text-white shadow group-hover:flex focus:flex dark:bg-slate-200 dark:text-slate-900"
+              >
+                {site.pinned ? '⌖' : '×'}
+              </button>
+            </div>
+          ))}
+          <button
+            onClick={() => setAddingSite((v) => !v)}
+            aria-label="Add a site to the start page"
+            title="Add a site"
+            data-testid="start-add-site"
+            className="flex w-[76px] flex-col items-center gap-2 rounded-xl px-1 py-3 hover:bg-slate-200/70 dark:hover:bg-slate-800/70"
+          >
+            <span className="flex h-11 w-11 items-center justify-center rounded-full border border-dashed border-slate-400 text-lg text-slate-500 dark:border-slate-600">
+              +
+            </span>
+            <span className="text-[11px] text-slate-500">Add site</span>
+          </button>
+        </div>
+        {addingSite && (
+          <form
+            className="mt-3 flex w-full max-w-md gap-2"
+            onSubmit={(e) => {
+              e.preventDefault()
+              addSite()
+            }}
+          >
+            <input
+              autoFocus
+              value={newSite}
+              onChange={(e) => {
+                setNewSite(e.target.value)
+                setNewSiteError('')
+              }}
+              placeholder="example.com"
+              aria-label="Site to add"
+              spellCheck={false}
+              autoComplete="off"
+              className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            />
+            <button
+              type="submit"
+              className="rounded-lg bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500"
+            >
+              Pin
+            </button>
+          </form>
         )}
+        {newSiteError && <div className="mt-1 text-xs text-rose-500">{newSiteError}</div>}
 
         {bookmarks.length > 0 && (
           <div
@@ -254,10 +320,17 @@ export function StartPage(): React.JSX.Element {
   )
 }
 
-function hostLabel(url: string): string {
-  try {
-    return new URL(url).host.replace(/^www\./, '')
-  } catch {
-    return url
-  }
+/**
+ * A site's icon: the favicon the page reported while it was open, else the
+ * profile's favicon database through chrome://favicon2 (registered for this
+ * page in webdeck_ui.cc), else the first letter of the host. The database
+ * holds an icon for every site the profile has visited, so the letter is for
+ * a site pinned by hand and never opened, or a host with no favicon at all.
+ */
+function SiteIcon({ url, favicon }: { url: string; favicon?: string }): React.JSX.Element {
+  const [failed, setFailed] = useState(false)
+  const src =
+    favicon ?? `chrome://favicon2/?size=20&scaleFactor=2x&pageUrl=${encodeURIComponent(url)}`
+  if (failed) return <>{(hostLabel(url)[0] ?? '?').toUpperCase()}</>
+  return <img src={src} alt="" width={20} height={20} onError={() => setFailed(true)} />
 }

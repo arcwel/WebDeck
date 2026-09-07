@@ -7,6 +7,7 @@ export type ComposerSurface = 'deck' | 'assistant'
 import { docNavTarget } from '@shared/ipc'
 import type { BrowserTabState, ImportedVisitInfo, WorkspaceInfo } from '@shared/ipc'
 import type { HistoryEntry } from '@/omnibox-rank'
+import { emptyStartSites, type StartSites } from '@/start-sites'
 import type { AgentAttachment, AgentSessionInfo } from '@shared/agents'
 import type {
   BlockGroup,
@@ -208,7 +209,24 @@ const DEFAULT_DECK_SIZES: DeckSizes = {
   // space once something is actually put there.
   leftWidth: 0,
   dockHeight: 248,
-  dockWidths: {}
+  dockWidths: {},
+  // The dock runs the full width by default: a column that stopped above it
+  // left a dead square in the corner, which nothing could use.
+  corners: { left: 'dock', right: 'dock' }
+}
+
+/**
+ * The width a left column opens at when the store still says 0.
+ *
+ * 0 means "closed"; the first block dropped into the column opens it without
+ * writing a width, so the layout falls back to this. A resize has to start
+ * from the width on screen, not from 0 — a drag that began at 0 jumped the
+ * column to its minimum on the first pixel of movement.
+ */
+export const DEFAULT_LEFT_WIDTH = 320
+
+export function effectiveLeftWidth(sizes: DeckSizes): number {
+  return sizes.leftWidth > 0 ? sizes.leftWidth : DEFAULT_LEFT_WIDTH
 }
 
 /** Keep resizes within sane, on-screen bounds. */
@@ -223,7 +241,11 @@ export function clampDeckSizes(sizes: DeckSizes): DeckSizes {
         id,
         Math.min(1400, Math.max(220, Math.round(width)))
       ])
-    )
+    ),
+    corners: {
+      left: sizes.corners?.left === 'column' ? 'column' : 'dock',
+      right: sizes.corners?.right === 'column' ? 'column' : 'dock'
+    }
   }
 }
 
@@ -332,6 +354,34 @@ function saveBookmarks(profileId: string, bookmarks: Array<{ url: string; title:
     localStorage.setItem(bmKey(profileId), JSON.stringify(bookmarks))
   } catch {
     // storage unavailable — bookmarks just won't persist
+  }
+}
+
+/* ---- Start page sites (localStorage, per profile — mirrors bookmarks) ---- */
+
+function startSitesKey(profileId: string): string {
+  return `agweb.start-sites:${profileId}`
+}
+
+function loadStartSites(profileId: string): StartSites {
+  try {
+    const raw = localStorage.getItem(startSitesKey(profileId))
+    if (!raw) return emptyStartSites()
+    const parsed = JSON.parse(raw) as Partial<StartSites>
+    return {
+      pinned: Array.isArray(parsed.pinned) ? parsed.pinned : [],
+      hidden: Array.isArray(parsed.hidden) ? parsed.hidden : []
+    }
+  } catch {
+    return emptyStartSites()
+  }
+}
+
+function saveStartSites(profileId: string, sites: StartSites): void {
+  try {
+    localStorage.setItem(startSitesKey(profileId), JSON.stringify(sites))
+  } catch {
+    // storage unavailable — the choice just won't persist
   }
 }
 
@@ -698,6 +748,8 @@ interface ShellState {
   /** Collapse a block to the rail; restore puts it back in its old zone. */
   /** Edge-resize (2B.3): set the deck column width / dock height. */
   setDeckSizes(sizes: Partial<DeckSizes>): void
+  /** Flip who owns a bottom corner: the dock under the column, or the column beside the dock. */
+  toggleDeckCorner(side: 'left' | 'right'): void
   /** Pin bottom-dock block widths (merged, so one drag can set both sides). */
   setDockWidths(widths: Record<string, number>): void
   /**
@@ -772,6 +824,12 @@ interface ShellState {
   bookmarks: Array<{ url: string; title: string }>
   addBookmark(url: string, title: string): void
   removeBookmark(url: string): void
+  /** Which sites the start page shows: pinned always, hidden never. */
+  startSites: StartSites
+  pinStartSite(url: string, title?: string): void
+  unpinStartSite(url: string): void
+  hideStartSite(url: string): void
+  unhideStartSite(url: string): void
   /** Merge an imported set into the active profile's bookmarks (deduped). */
   importBookmarks(items: Array<{ url: string; title: string }>): number
   /** Visited pages for the active profile, most-relevant first — omnibox source. */
@@ -1016,8 +1074,50 @@ export const useShellStore = create<ShellState>((set) => ({
       return {
         activeProfileId: profileId,
         bookmarks: loadBookmarks(profileId),
-        history: loadHistory(profileId)
+        history: loadHistory(profileId),
+        startSites: loadStartSites(profileId)
       }
+    }),
+  startSites: loadStartSites('default'),
+  pinStartSite: (url, title) =>
+    set((state) => {
+      const pinned = [
+        ...state.startSites.pinned.filter((p) => p.url !== url),
+        { url, title: title ?? '' }
+      ]
+      // A pinned site is wanted: it comes off the hidden list too.
+      const startSites = { pinned, hidden: state.startSites.hidden.filter((h) => h !== url) }
+      saveStartSites(state.activeProfileId, startSites)
+      return { startSites }
+    }),
+  unpinStartSite: (url) =>
+    set((state) => {
+      const startSites = {
+        ...state.startSites,
+        pinned: state.startSites.pinned.filter((p) => p.url !== url)
+      }
+      saveStartSites(state.activeProfileId, startSites)
+      return { startSites }
+    }),
+  hideStartSite: (url) =>
+    set((state) => {
+      const startSites = {
+        pinned: state.startSites.pinned.filter((p) => p.url !== url),
+        hidden: state.startSites.hidden.includes(url)
+          ? state.startSites.hidden
+          : [...state.startSites.hidden, url]
+      }
+      saveStartSites(state.activeProfileId, startSites)
+      return { startSites }
+    }),
+  unhideStartSite: (url) =>
+    set((state) => {
+      const startSites = {
+        ...state.startSites,
+        hidden: state.startSites.hidden.filter((h) => h !== url)
+      }
+      saveStartSites(state.activeProfileId, startSites)
+      return { startSites }
     }),
   bookmarks: loadBookmarks('default'),
   addBookmark: (url, title) =>
@@ -1151,7 +1251,15 @@ export const useShellStore = create<ShellState>((set) => ({
         : { composerDraft: { text, attachments, target: options?.target }, deckRevealed: true }
     ),
   assistantOpen: false,
-  openAssistant: () => set({ assistantOpen: true }),
+  // The Ask panel and the Dev Deck never share a window. Opening Ask folds an
+  // attached Deck away; a Deck in its own window is left alone. The reverse
+  // rule — the Deck coming forward closes Ask — lives in the subscription
+  // below the store, so every path that reveals the Deck obeys it.
+  openAssistant: () =>
+    set((state) => ({
+      assistantOpen: true,
+      deckRevealed: state.deckMode === 'attached' ? false : state.deckRevealed
+    })),
   closeAssistant: () => set({ assistantOpen: false }),
 
   blockDragging: false,
@@ -1339,6 +1447,14 @@ export const useShellStore = create<ShellState>((set) => ({
 
   setDeckSizes: (sizes) =>
     set((state) => ({ deckSizes: clampDeckSizes({ ...state.deckSizes, ...sizes }) })),
+  toggleDeckCorner: (side) =>
+    set((state) => {
+      const corners = clampDeckSizes(state.deckSizes).corners!
+      const next = corners[side] === 'dock' ? 'column' : 'dock'
+      return {
+        deckSizes: clampDeckSizes({ ...state.deckSizes, corners: { ...corners, [side]: next } })
+      }
+    }),
 
   zoneCapacity: {
     left: UNMEASURED_CAPACITY,
@@ -1696,10 +1812,16 @@ export const useShellStore = create<ShellState>((set) => ({
               makeGroup('bottom', need('terminal')),
               makeGroup('bottom', need('agents'))
             ]
-          : [
+          : // Debugging is not Building with a logs tab. The file tree moves to
+            // the left column, the debugger stands beside the editor on the
+            // right, and the bottom dock is the evidence: logs first and on
+            // their own, then the terminal, then the agent.
+            [
+              makeGroup('left', need('files')),
               makeGroup('right', need('editor')),
-              makeGroup('right', need('files')),
-              makeGroup('bottom', [...need('terminal'), ...need('logs')]),
+              makeGroup('right', need('debug')),
+              makeGroup('bottom', need('logs')),
+              makeGroup('bottom', need('terminal')),
               makeGroup('bottom', need('agents'))
             ]
 
@@ -1716,6 +1838,18 @@ export const useShellStore = create<ShellState>((set) => ({
       return { blocks, groups, rail: [], deckRevealed: true }
     })
 }))
+
+/* ---- One surface at a time ---- */
+
+// The Deck has priority over the Ask panel in the same window: whenever an
+// attached Deck comes forward — ⌘D, a preset, a file opening into the editor,
+// a restore — the panel closes. A detached Deck lives in its own window and
+// the two coexist. openAssistant handles the other direction.
+useShellStore.subscribe((state) => {
+  if (state.assistantOpen && state.deckMode === 'attached' && state.deckRevealed) {
+    useShellStore.setState({ assistantOpen: false })
+  }
+})
 
 /* ---- Cross-window sync + persistence ---- */
 

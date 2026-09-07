@@ -6,7 +6,8 @@ import {
   type BlockGroup,
   type BlockInstance,
   type DeckZone,
-  type DropTarget
+  type DropTarget,
+  effectiveLeftWidth
 } from '@/store'
 import { BlockTypeIcon, CloseIcon, GripIcon, MinusIcon, PopOutIcon } from '@/components/icons'
 import { capacityFor } from '@/deck-capacity'
@@ -120,8 +121,38 @@ export function Deck(): React.JSX.Element {
       {left.length > 0 && <ResizeHandle axis="left" />}
       <ResizeHandle axis="col" />
       {bottom.length > 0 && <ResizeHandle axis="dock" />}
+      {bottom.length > 0 && left.length > 0 && <CornerToggle side="left" />}
+      {bottom.length > 0 && right.length > 0 && <CornerToggle side="right" />}
       <Rail />
     </>
+  )
+}
+
+/**
+ * The corner where a side column meets the bottom dock has two owners to
+ * choose from: the dock runs the full width under the column, or the column
+ * stands full height beside the dock. One click at the junction flips it,
+ * per side, so a tall file tree and a wide log can coexist.
+ */
+function CornerToggle({ side }: { side: 'left' | 'right' }): React.JSX.Element {
+  const owner = useShellStore((s) => s.deckSizes.corners?.[side] ?? 'dock')
+  const toggle = useShellStore((s) => s.toggleDeckCorner)
+  const column = side === 'left' ? 'left column' : 'right column'
+  const label =
+    owner === 'dock'
+      ? `Let the ${column} run full height beside the dock`
+      : `Let the bottom dock run the full width under the ${column}`
+  return (
+    <button
+      type="button"
+      className={`deck-corner deck-corner-${side} deck-corner-${owner}`}
+      onClick={() => toggle(side)}
+      aria-label={label}
+      title={label}
+      data-testid={`deck-corner-${side}`}
+    >
+      <span aria-hidden="true">{owner === 'dock' ? (side === 'left' ? '⌞' : '⌟') : '│'}</span>
+    </button>
   )
 }
 
@@ -145,8 +176,12 @@ function ResizeHandle({ axis }: { axis: 'col' | 'dock' | 'left' }): React.JSX.El
       if (axis === 'col') {
         setDeckSizes({ colWidth: drag.initial.colWidth + (drag.start.x - e.clientX) })
       } else if (axis === 'left') {
-        // The left column grows the other way: rightward drag widens it.
-        setDeckSizes({ leftWidth: drag.initial.leftWidth + (e.clientX - drag.start.x) })
+        // The left column grows the other way: rightward drag widens it. From
+        // the width on screen — a column opened by a drop may still be 0 in
+        // the store while it shows at the default width.
+        setDeckSizes({
+          leftWidth: effectiveLeftWidth(drag.initial) + (e.clientX - drag.start.x)
+        })
       } else {
         setDeckSizes({ dockHeight: drag.initial.dockHeight + (drag.start.y - e.clientY) })
       }

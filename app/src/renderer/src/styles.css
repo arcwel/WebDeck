@@ -193,6 +193,9 @@ body,
   --deck-col-w: 436px;
   --deck-left-w: 0px;
   --deck-dock-h: 248px;
+  /* The gap between the left column and the stage, where its resize handle
+     lives. Zero when the column is empty, so an empty column costs nothing. */
+  --deck-left-gutter: 6px;
   /* The smallest a group may be. The zone views read these to decide how many
      groups fit (deck-capacity.ts); past that, a block joins a stack as a tab. */
   --deck-group-min-h: 260px;
@@ -220,6 +223,20 @@ body,
 }
 .workspace.has-assistant {
   --assistant-w: 392px;
+}
+/* The Ask panel and an attached Deck never share the window (store.ts), so
+   while the panel is open the Deck is always folded — and a folded column
+   slides off to the right, which is now exactly where the panel sits. The
+   panel is glass, so the folded Deck showed through it as a ghost. Once the
+   slide has played, the folded Deck is not painted at all. */
+.workspace.has-assistant .deck-left,
+.workspace.has-assistant .deck-col,
+.workspace.has-assistant .deck-dock,
+.workspace.has-assistant .deck-rail {
+  visibility: hidden;
+  transition:
+    transform 0.55s cubic-bezier(0.32, 0.72, 0, 1) 0s,
+    visibility 0s linear 0.55s;
 }
 .assistant-panel {
   position: absolute;
@@ -282,7 +299,7 @@ body,
 }
 .workspace.revealed .stage {
   inset: 6px calc(var(--deck-col-w) + 12px + var(--rail-w)) calc(var(--deck-dock-h) + 12px)
-    calc(var(--deck-left-w) + 6px + var(--tabrail-w));
+    calc(var(--deck-left-w) + var(--deck-left-gutter) + 6px + var(--tabrail-w));
   border-radius: var(--wd-r-stage);
   box-shadow: 0 18px 46px rgba(0, 0, 0, 0.5);
   transition-delay: 0s;
@@ -297,7 +314,7 @@ body,
 .viewport-chip {
   position: absolute;
   top: 14px;
-  left: calc(var(--deck-left-w) + 14px);
+  left: calc(var(--deck-left-w) + var(--deck-left-gutter) + 14px);
   z-index: 30;
   display: flex;
   align-items: center;
@@ -391,6 +408,9 @@ body,
   width: 10px;
   overflow: visible;
 }
+.workspace.left-empty {
+  --deck-left-gutter: 0px;
+}
 
 /* ---- Drop targets while a block is in the air ----------------------------
    A 10px strip is a fine resting state and a poor target: the cursor carries
@@ -447,7 +467,7 @@ body,
 /* Bottom dock: rises from below, last. */
 .deck-dock {
   position: absolute;
-  left: calc(var(--deck-left-w) + 6px + var(--tabrail-w));
+  left: calc(6px + var(--tabrail-w));
   right: calc(6px + var(--rail-w) + var(--assistant-w));
   bottom: 6px;
   height: var(--deck-dock-h);
@@ -481,10 +501,16 @@ body,
 }
 
 /* Edge-resize handles (2B.3): live in the 12px gutters beside the deck. */
+/* Zone resize handles. Each sits in the 6px gutter beside its zone plus 6px
+   over the zone's own edge — and never over the stage, because a native page
+   covers the stage rect and a handle under it cannot be grabbed. That was why
+   only the dock handle seemed to work, and only over the start page. Faintly
+   visible at rest so the affordance can be found; full strength under the
+   pointer. */
 .deck-resize {
   position: absolute;
   z-index: 30;
-  opacity: 0;
+  opacity: 0.35;
   transition: opacity 0.15s;
 }
 .deck-resize:hover,
@@ -501,14 +527,14 @@ body,
 .deck-resize-col {
   top: 6px;
   bottom: calc(var(--deck-dock-h) + 12px);
-  right: calc(12px + var(--rail-w) + var(--deck-col-w));
+  right: calc(var(--rail-w) + var(--assistant-w) + var(--deck-col-w));
   width: 12px;
   cursor: col-resize;
 }
 .deck-resize-dock {
-  left: calc(var(--deck-left-w) + 6px);
+  left: calc(6px + var(--tabrail-w));
   right: calc(6px + var(--rail-w) + var(--assistant-w));
-  bottom: calc(12px + var(--deck-dock-h));
+  bottom: var(--deck-dock-h);
   height: 12px;
   cursor: row-resize;
 }
@@ -760,9 +786,67 @@ body,
 .deck-resize-left {
   top: 6px;
   bottom: calc(var(--deck-dock-h) + 12px);
-  left: var(--deck-left-w);
+  left: calc(var(--tabrail-w) + var(--deck-left-w));
   width: 12px;
   cursor: col-resize;
+}
+
+/* ---- Who owns each bottom corner -------------------------------------------
+   By default the dock runs the full width and both columns stop above it. A
+   corner given to its column (.left-corner-column / .right-corner-column, from
+   deckSizes.corners) runs that column to the bottom and starts or ends the
+   dock beside it instead. Each side is independent. The handles follow. */
+.workspace.left-corner-column .deck-left,
+.workspace.left-corner-column .deck-resize-left {
+  bottom: 6px;
+}
+.workspace.left-corner-column .deck-dock,
+.workspace.left-corner-column .deck-resize-dock {
+  left: calc(var(--deck-left-w) + var(--deck-left-gutter) + 6px + var(--tabrail-w));
+}
+.workspace.right-corner-column .deck-col,
+.workspace.right-corner-column .deck-resize-col {
+  bottom: 6px;
+}
+.workspace.right-corner-column .deck-dock,
+.workspace.right-corner-column .deck-resize-dock {
+  right: calc(12px + var(--rail-w) + var(--assistant-w) + var(--deck-col-w));
+}
+
+/* The corner toggles sit on the junction of the three edges, one per side. */
+.deck-corner {
+  position: absolute;
+  z-index: 31;
+  width: 18px;
+  height: 18px;
+  bottom: calc(var(--deck-dock-h) + 12px - 9px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--wd-border);
+  background: var(--wd-surface);
+  color: var(--wd-dim);
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0.55;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.deck-corner:hover,
+.deck-corner:focus-visible {
+  opacity: 1;
+  color: var(--wd-text);
+}
+.deck-corner-left {
+  left: calc(var(--tabrail-w) + var(--deck-left-w) + var(--deck-left-gutter) + 6px - 9px);
+}
+.deck-corner-right {
+  right: calc(6px + var(--rail-w) + var(--assistant-w) + var(--deck-col-w) + 6px - 9px);
+}
+.workspace.has-assistant .deck-corner,
+.workspace:not(.revealed) .deck-corner {
+  visibility: hidden;
 }
 
 /* Splitters between bottom-dock blocks: every block in the dock is resizable

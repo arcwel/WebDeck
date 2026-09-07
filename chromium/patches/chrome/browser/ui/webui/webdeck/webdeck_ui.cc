@@ -14,11 +14,15 @@
 #include "base/task/thread_pool.h"
 #include "base/values.h"
 #include "chrome/browser/profiles/profile.h"
+#include "chrome/browser/ui/webui/favicon_source.h"
 #include "chrome/browser/ui/webui/webdeck/webdeck_agent_tabs.h"
 #include "chrome/browser/ui/webui/webdeck/webdeck_shell.h"
 #include "chrome/browser/webdeck/webdeck_core_service.h"
+#include "chrome/common/webui_url_constants.h"
 #include "chrome/grit/webdeck_resources.h"
 #include "chrome/grit/webdeck_resources_map.h"
+#include "components/favicon_base/favicon_url_parser.h"
+#include "content/public/browser/url_data_source.h"
 #include "content/public/browser/web_contents.h"
 #include "content/public/browser/web_ui.h"
 #include "content/public/browser/web_ui_data_source.h"
@@ -116,6 +120,16 @@ WebDeckUI::WebDeckUI(content::WebUI* web_ui) : WebUIController(web_ui) {
   // and enables Trusted Types.
   webui::SetupWebUIDataSource(source, kWebdeckResources,
                               IDR_WEBDECK_INDEX_HTML);
+
+  // Site icons for the start page, from Chromium's own favicon database:
+  // chrome://favicon2/?pageUrl=… answers for every site the profile has
+  // visited, the same source the new tab page and history use. The default
+  // WebUI img-src already admits it, so the page needs nothing more than the
+  // URL, and no icon ever comes from the network on the page's behalf.
+  Profile* profile = Profile::FromWebUI(web_ui);
+  content::URLDataSource::Add(
+      profile, std::make_unique<FaviconSource>(
+                   profile, chrome::FaviconUrlFormat::kFavicon2));
 
   // The core is started by the core-port.js handler, on a MayBlock sequence.
   // Starting it here would mean blocking the UI thread in a WebUI constructor,

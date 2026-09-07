@@ -57,6 +57,9 @@ export interface RailEntry {
   index?: number
 }
 
+/** Who owns the corner where a side column meets the bottom dock. */
+export type DeckCorner = 'dock' | 'column'
+
 /** User-resizable deck dimensions (2B.3), in px. */
 export interface DeckSizes {
   colWidth: number
@@ -67,6 +70,11 @@ export interface DeckSizes {
    *  resizable, not just the first — a missing entry means "share what is
    *  left", which is how a newly dropped group starts. */
   dockWidths: Record<string, number>
+  /** Each bottom corner: 'dock' runs the dock the full width under that
+   *  column; 'column' runs the column the full height beside the dock. Set
+   *  per side, so one column can stand full height while the dock runs under
+   *  the other. Absent in layouts saved before this existed: both 'dock'. */
+  corners?: { left: DeckCorner; right: DeckCorner }
 }
 
 /** The layout slice mirrored across windows (browser, deck, floats). */

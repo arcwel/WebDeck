@@ -135,9 +135,11 @@ if (dryRun) {
 // theirs. It guards a keychain that holds one throwaway signing key and
 // nothing else.
 mkdirSync(SIGNING_DIR, { recursive: true, mode: 0o700 })
+// Hex, so the password can never begin with a dash and be read as a flag by
+// the security tool, which takes it as a bare argument.
 const password = existsSync(PASSWORD_FILE)
   ? readFileSync(PASSWORD_FILE, 'utf8').trim()
-  : randomBytes(24).toString('base64url')
+  : randomBytes(24).toString('hex')
 writeFileSync(PASSWORD_FILE, `${password}\n`, { mode: 0o600 })
 chmodSync(PASSWORD_FILE, 0o600)
 
@@ -234,5 +236,14 @@ subjectKeyIdentifier = hash
 
 const hash = identityHash()
 if (!hash) fail('the certificate imported but codesign does not offer it as an identity')
+// Prove the stored password opens the keychain, now, while it is cheap to
+// redo: a keychain that later refuses its own password surfaces as codesign
+// asking the user for a password nobody knows.
+if (
+  sh('/usr/bin/security', ['unlock-keychain', '-p', password, KEYCHAIN], { allowFail: true }) ===
+  null
+) {
+  fail('the keychain was created but does not unlock with the password that was stored for it')
+}
 
 done('ok', `${IDENTITY} is ready (${hash}) — build with --identity "${IDENTITY}"`)
