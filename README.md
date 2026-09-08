@@ -30,11 +30,12 @@ Every IDE eventually grows a browser, and it is always the worst browser you own
 
 WebDeck starts from the other end. It **is** Chromium, a fork of the real thing, with tabs, extensions, profiles, downloads, permissions and devtools. When you need to build, the **Dev Deck** slides in around the page: editor, terminal, files, source control, debugger, tasks, notebooks, and an agent that can drive the tabs you are looking at. Press <kbd>⌘D</kbd> again and it is a browser again.
 
-Three things follow from that ordering:
+Four things follow from that ordering:
 
 - **The page is never second-class.** Read the docs, try the thing, check the result, all in one window. The agent verifies its work in the same browser you use, logged in as you.
 - **The agent shows its work.** It plans first, you approve, and then every command runs in a live terminal inside the conversation, every edit ships a diff, and every browser action happens in a tab you can see. A policy engine gates anything irreversible.
 - **The IDE is real.** The editor runs on VS Code's own service layer: your settings, keybindings, themes and extensions from Open VSX, with language intelligence over LSP and debugging over DAP.
+- **Documents are documents.** Markdown, JSON, YAML, CSV, XML, SVG and TOML open in **Document Studio** as styled pages rather than raw text, with diagrams, math, a graph view of structured data, a one-click toggle to the source and export to HTML or PDF. A `.slides.md` file is a slide deck. Drop a file on the window and it opens where it lives, editable in place, and follows every save. The notes you write, the reports the agent produces and the data you are inspecting all read the same way, in the same window as the page they are about.
 
 ## What you get
 
@@ -140,13 +141,17 @@ It carries commits and updates for all 75 datatypes, with per-account storage, p
 
 **Requirements:** macOS 13 or later on Apple Silicon.
 
-1. Download `Arcwel-WebDeck-<version>-arm64.dmg` from the [releases](https://github.com/arcwel/WebDeck/releases).
-2. Open it and drag **Arcwel WebDeck** to Applications.
-3. Open it from Applications or Launchpad.
+1. Download `Arcwel-WebDeck-<version>-arm64.zip` or the `.dmg` from the [releases](https://github.com/arcwel/WebDeck/releases).
+2. Unzip, or open the disk image, and drag **Arcwel WebDeck** to Applications.
+3. Open it from Applications or Launchpad. The current releases are signed for
+   testing and not yet notarized, so the first launch takes one extra step: see
+   [Opening a pre-release build](#opening-a-pre-release-build).
 
-That is the whole install for a signed release. The build is notarized by Apple
-and the ticket is stapled to both the app and the disk image, so it opens the
-first time, with no warning and with no network.
+From then on WebDeck keeps itself current: it checks for a newer release on
+launch and once a day, and **Update now** in the title bar fetches the build,
+verifies it against the release's published checksum and unpacks it for you.
+Once releases are notarized, the extra step on first launch goes away and
+nothing else changes.
 
 The agent needs a provider key. **Settings → AI** stores it in the macOS Keychain, or points WebDeck at your password manager (`op read`, `pass show`, `security find-generic-password`, `vault read`). `ANTHROPIC_API_KEY` in the environment also works.
 
@@ -316,7 +321,7 @@ The shell page owns the window and streams the stage rectangle to the browser; C
 
 ## Status
 
-Pre-release, in user testing. The browser, the Dev Deck, the agent with its permission engine and guards, the IDE layer and Document Studio are built, verified on the real window at normal and small window sizes, and shipped as a release candidate DMG. Signed distribution needs an Apple Developer ID and is documented, not yet automated. The [changelog](CHANGELOG.md) lists what changed in each round.
+Pre-release, in user testing, at v0.1.3. The browser, the Dev Deck, the agent with its permission engine and guards, the IDE layer, Document Studio, local models and the in-app updater are built and verified on the real window at normal and small sizes. Releases are signed for testing; notarized distribution needs an Apple Developer ID and is wired up, waiting on the certificate. The [changelog](CHANGELOG.md) lists what changed in each round.
 
 ## License
 

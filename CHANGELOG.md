@@ -17,8 +17,6 @@ All notable changes to Arcwel WebDeck are recorded here. This project adheres to
   release's published digest — that check is the vouching the flag asks for.
   The packager also clears it from the staged app before zipping.
 
-## v0.1.2 — 2026-09-07
-
 ### Added (Update now)
 
 - **Update now fetches the new build for you.** The Update panel's Update now
@@ -31,8 +29,6 @@ All notable changes to Arcwel WebDeck are recorded here. This project adheres to
   `Arcwel-WebDeck-<version>-arm64.zip` (ditto, so the signature's attributes
   survive) and a `SHA256SUMS`. Both go up as release assets; the checker picks
   the zip for this architecture and verifies against the sums.
-
-## v0.1.1 — 2026-09-07
 
 ### Added (release checks)
 

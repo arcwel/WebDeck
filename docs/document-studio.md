@@ -1,24 +1,28 @@
 # Document Studio
 
 Document Studio renders structured text as **styled documents** instead of raw
-source. Open a supported file from the **Files** tree and, rather than a wall of
-plain text, you get a formatted view — with a one-click toggle back to the source
-whenever you want it.
+source. Open a supported file from the **Files** tree, drop it on the window, or
+pick it with **Open file…**, and rather than a wall of plain text you get a
+formatted view — with a one-click toggle back to the source whenever you want
+it, and the file editable and saveable in place.
 
 ## Supported formats
 
-| Format                      | Rendered as                                                   |
-| :-------------------------- | :------------------------------------------------------------ |
-| **Markdown** (`.md`)        | A styled document — headings, tables, code blocks, task lists |
-| **JSON** (`.json`)          | A readable, structured view                                   |
-| **YAML** (`.yaml` / `.yml`) | A readable, structured view                                   |
-| **CSV** (`.csv`)            | A table                                                       |
-| **TOML** (`.toml`)          | A readable, structured view                                   |
+| Format                          | Rendered as                                                   |
+| :------------------------------ | :------------------------------------------------------------ |
+| **Markdown** (`.md`)            | A styled document — headings, tables, code blocks, task lists |
+| **JSON** (`.json`)              | A readable tree, and a graph of the structure                 |
+| **YAML** (`.yaml` / `.yml`)     | A readable tree, and a graph of the structure                 |
+| **TOML** (`.toml`)              | A readable tree, and a graph of the structure                 |
+| **CSV / TSV** (`.csv` / `.tsv`) | A table                                                       |
+| **XML** (`.xml`)                | A readable tree                                               |
+| **SVG** (`.svg`)                | The image, with its source a click away                       |
+| **Slides** (`*.slides.md`)      | A Reveal.js presentation (see below)                          |
 
 Markdown documents also render:
 
 - **Mermaid diagrams** — fenced ```mermaid blocks become real diagrams (drawn with
-  `securityLevel: 'strict'`).
+  `securityLevel: 'strict'`, and rendered under the page's Trusted Types policy).
 - **Math** — inline and block math.
 
 Toggle back to the raw source at any time with a single click.
@@ -49,9 +53,14 @@ Beyond the slide exports above, a rendered document can be exported to:
 
 ## Opening documents
 
-Open a document from the **Files** tree to see the styled view. (Navigating to a
-file by URL in the browser doesn't yet trigger the styled view — that path is
-tracked for a future release.)
+Three ways in, all landing in the same view:
+
+- Click a file in the **Files** tree of the open project.
+- **Drop** a file on the window, from Finder or anywhere else.
+- **Open file…** from the menu, which uses the native open panel.
+
+A document opened from outside a project opens at its own path, not as a copy —
+see [Files from outside a project](#files-from-outside-a-project).
 
 ## Source files
 

@@ -1957,11 +1957,10 @@ export function inFlightCount(): number {
 export function registerAgentRpc(): void {
   core.register(IpcChannels.agentStart, (task, attachments) => {
     const t = asString(task)?.trim()
-    // TODO(qa): return {error} to match the transport-agnostic contract that
-    // ask/chat/edit follow — throwing rejects on the Electron transport. Deferred:
-    // startAgentTask returns a plain session-id string and the agentStart channel
-    // is typed Promise<string>, so widening the shape would touch ipc.ts and the
-    // one renderer caller. Behavior left unchanged.
+    // An empty task is rejected rather than answered with an {error} shape:
+    // this channel returns a session id, the composer never sends an empty
+    // task, and widening the reply for a case no caller produces would cost
+    // every caller a check. The throw surfaces as a rejected call.
     if (!t) throw new Error('empty task')
     return startAgentTask(t, sanitizeAttachments(attachments))
   })
