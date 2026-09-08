@@ -76,6 +76,9 @@ source_set("impl") {
     "//services/media_session/public/mojom",
     "//services/network/public/mojom",
     "//ui/base",
+    # CaptureStage: the stage still, JPEG-encoded off the UI thread.
+    "//ui/gfx/codec",
+    "//components/viz/common",
     "//ui/shell_dialogs",
     "//ui/webui",
     "//url",

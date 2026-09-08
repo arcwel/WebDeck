@@ -60,6 +60,8 @@ const HOST_OWNED: Record<string, string> = {
   'browser:set-secondary-bounds': 'Chromium owns split view (secondary stage geometry)',
   'browser:picture-in-picture': 'Chromium owns Picture-in-Picture',
   'browser:get-page-text': "Chromium owns the tab's rendered content (read for the Page Assistant)",
+  'browser:capture-stage':
+    "Chromium owns the tab's pixels (the still shown while an overlay hides the stage)",
   // Browser preferences: Chromium's PrefService / content settings, surfaced in
   // the WebDeck settings panel over Mojo because chrome://settings is gated.
   'browser:get-cookie-block': 'Chromium owns cookie settings',
@@ -92,7 +94,6 @@ const HOST_OWNED: Record<string, string> = {
   'profiles:set-active': 'Chromium owns profiles',
   'profiles:create': 'Chromium owns profiles',
   'profiles:remove': 'Chromium owns profiles',
-  'profiles:google-status': 'Chromium owns sign-in',
   'ext:load': 'Chromium owns extensions',
   'ext:load-packed': 'Chromium owns extensions',
   'ext:remove': 'Chromium owns extensions',

@@ -16,6 +16,8 @@
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 #include "base/task/thread_pool.h"
+#include "base/task/bind_post_task.h"
+#include "base/task/sequenced_task_runner.h"
 #include "base/unguessable_token.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/time/time.h"
@@ -63,6 +65,10 @@
 #include "extensions/browser/extension_registry.h"
 #include "extensions/common/extension.h"
 #include "ui/gfx/image/image.h"
+#include "components/viz/common/frame_sinks/copy_output_result.h"
+#include "content/public/browser/render_widget_host_view.h"
+#include "third_party/skia/include/core/SkBitmap.h"
+#include "ui/gfx/codec/jpeg_codec.h"
 #include "chrome/common/chrome_isolated_world_ids.h"
 #include "chrome/common/pref_names.h"
 #include "chrome/common/webui_url_constants.h"
@@ -176,6 +182,37 @@ void OnPageTextExtracted(mojom::Shell::GetPageTextCallback callback,
     text.resize(kMaxPageTextChars);
   }
   std::move(callback).Run(text);
+}
+
+// The still the shell shows in place of a hidden stage (CaptureStage). JPEG,
+// not PNG: a page-sized bitmap at 2x encodes in a few tens of milliseconds as
+// JPEG and several times longer as PNG, and the still is on screen only for as
+// long as a menu is open. 90 keeps text crisp.
+constexpr int kStageStillJpegQuality = 90;
+
+// Runs on the thread pool: the still as a data: URL, or "" when the copy drew
+// nothing. Encoding stays off the UI thread so a menu never stalls the window.
+std::string EncodeStageStill(const SkBitmap& bitmap) {
+  if (bitmap.drawsNothing()) {
+    return std::string();
+  }
+  std::optional<std::vector<uint8_t>> jpeg =
+      gfx::JPEGCodec::Encode(bitmap, kStageStillJpegQuality);
+  if (!jpeg) {
+    return std::string();
+  }
+  return "data:image/jpeg;base64," + base::Base64Encode(*jpeg);
+}
+
+void OnStageCopied(mojom::Shell::CaptureStageCallback callback,
+                   const content::CopyFromSurfaceResult& result) {
+  if (!result.has_value()) {
+    std::move(callback).Run(std::string());
+    return;
+  }
+  base::ThreadPool::PostTaskAndReplyWithResult(
+      FROM_HERE, {base::TaskPriority::USER_BLOCKING},
+      base::BindOnce(&EncodeStageStill, result->bitmap), std::move(callback));
 }
 
 }  // namespace
@@ -1390,6 +1427,30 @@ void WebDeckShell::SetStageVisible(bool visible) {
     contents->SetVisible(visible);
   }
   container->SetSecondaryStageVisible(visible);
+}
+
+// A still of the staged tab for the shell to show while the stage is hidden
+// (see SetStageVisible). Copied from the compositor surface, so it is exactly
+// what the window shows, and encoded off the UI thread. The reply is wrapped
+// so a copy that never completes still answers "" instead of hanging the
+// shell's promise — the shell then hides the stage bare, as it always did.
+void WebDeckShell::CaptureStage(int32_t tab_id,
+                                CaptureStageCallback callback) {
+  content::WebContents* contents = GetTabById(tab_id);
+  content::RenderWidgetHostView* view =
+      contents ? contents->GetRenderWidgetHostView() : nullptr;
+  if (!view || !view->IsSurfaceAvailableForCopy()) {
+    std::move(callback).Run(std::string());
+    return;
+  }
+  view->CopyFromSurface(
+      /*src_rect=*/gfx::Rect(), /*output_size=*/gfx::Size(),
+      base::TimeDelta(),
+      base::BindPostTask(
+          base::SequencedTaskRunner::GetCurrentDefault(),
+          base::BindOnce(&OnStageCopied,
+                         mojo::WrapCallbackWithDefaultInvokeIfNotRun(
+                             std::move(callback), std::string()))));
 }
 
 // Another WebDeck window whose shell page carries a role in its fragment

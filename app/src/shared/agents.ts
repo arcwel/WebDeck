@@ -73,9 +73,14 @@ export interface AgentSessionInfo {
 }
 
 export interface AgentKeyStatus {
-  /** An API key is available (settings or ANTHROPIC_API_KEY). */
+  /** The agent can run: a key for the cloud provider, or a local runtime that answers. */
   configured: boolean
   /** Mock provider active (AGWEB_AGENT_MOCK=1) — no key or network needed. */
   mock: boolean
+  /** The provider's own name for the model in force for the agent. */
   model: string
+  /** Who answers: 'anthropic' or 'ollama'. Absent only in status objects saved before providers existed. */
+  provider?: 'anthropic' | 'ollama'
+  /** The model runs on this machine; nothing leaves it. */
+  local?: boolean
 }

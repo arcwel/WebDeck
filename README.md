@@ -48,6 +48,7 @@ Three things follow from that ordering:
 - **Extensions** from the Chrome Web Store, per profile.
 - **Ad and tracker blocking** with a live blocked count, third-party cookie controls, Do Not Track, HTTPS-Only mode.
 - A summonable **favourites bar** that floats above the page and can be pinned.
+- **Menus never blank the page.** A menu that stays inside its block or the dock leaves the page live. One that opens over the page — the toolbar menus, the address dropdown, the palette, Settings — sits on a still of the page taken the instant it opens, so what you were reading stays in view.
 
 ### The Dev Deck
 
@@ -67,6 +68,8 @@ Three things follow from that ordering:
 - **Permissions where the run starts.** A pill beside the model picker in the composer sets the mode, from Secure (ask about everything) to Full autonomy (never asks), with custom rules and the standing per-site decisions in the same popover.
 - **Five guards, each its own switch**: payments & checkout, banking & brokerage, passwords & identity, email & messaging, posting publicly. A guard makes the agent ask before it navigates to, clicks, types in or runs script on that kind of page, even under full autonomy. Inline prompts name the guard that asked; an audit log records every decision. The policy gate fails closed.
 - Conversations rename, branch from any turn, export, and hand back to the composer.
+
+- **Or on a model on this Mac.** Settings → AI → On this Mac lists what Ollama holds, with the capabilities the runtime reports, and either the agent or Ask can run there. Nothing leaves the machine, no key is needed, and the choice stays on this machine. When the runtime is not answering, or a model garbles a tool call or stops mid-answer, the agent says so in a sentence and stops, rather than guessing.
 
 ### A genuine IDE
 
@@ -211,12 +214,12 @@ node scripts/package-fork.mjs --build-dir out/webdeck-release --out ../dist
 
 ### The development loop
 
-| Change                                             | Rebuild                                                                                                                  |
-| :------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------- |
-| WebUI (React, `app/src/renderer`, `app/src/webui`) | `npm run pack:webui` (component build) or `pack:webui:release`, then `autoninja … chrome` relinks in about three minutes |
-| Core (`app/src/core`)                              | `npm run build:core && node scripts/install-core.mjs --app <.app>`; no browser rebuild                                   |
-| Chromium patches (`chromium/patches`)              | Edit the checkout, `git diff --binary > chromium/patches/upstream-edits.diff`, `npm run verify:patches`                  |
-| A `.mojom` change                                  | Build `…:mojo_bindings` first, then pack; packing refuses bindings that do not match the out dir                         |
+| Change                                             | Rebuild                                                                                                                                                                                                                          |
+| :------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| WebUI (React, `app/src/renderer`, `app/src/webui`) | `npm run pack:webui` (component build) or `pack:webui:release`, then `autoninja … chrome` relinks in about three minutes                                                                                                         |
+| Core (`app/src/core`)                              | `npm run build:core && node scripts/install-core.mjs --app <.app>`; no browser rebuild                                                                                                                                           |
+| Chromium patches (`chromium/patches`)              | Edit the checkout, `git diff --binary > chromium/patches/upstream-edits.diff`, `npm run verify:patches`                                                                                                                          |
+| A `.mojom` change                                  | `autoninja -C <out> chrome/browser/ui/webui/webdeck:mojo_bindings_ts__generator` first (the page's bindings; `chrome` does not depend on them), then pack, then `chrome`. Packing refuses bindings that do not match the out dir |
 
 A build you rebuild every hour should not ask for your login password every hour. Two things stop it, and both are for builds that stay on your machine:
 
@@ -287,20 +290,21 @@ The shell page owns the window and streams the stage rectangle to the browser; C
 
 ## Documentation
 
-| Document                                                                                                        | Read it when                                                           |
-| :-------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------- |
-| [Getting Started](docs/getting-started.md)                                                                      | You have just installed it                                             |
-| [Agent Workflows](docs/agent-workflows.md) · [Permission Modes](docs/permission-modes.md)                       | You are giving the agent work                                          |
-| [Document Studio](docs/document-studio.md) · [Settings Sync](docs/settings-sync.md)                             | You want the rendered docs or the same setup on two machines           |
-| [Devices plan](docs/device-sync-plan.md)                                                                        | Tabs from your other devices, and sending things between them (a plan) |
-| [`PRD.md`](PRD.md) · [`ROADMAP.md`](ROADMAP.md)                                                                 | You want to know what it is for and where it is going                  |
-| [`DESIGN.md`](DESIGN.md)                                                                                        | You are changing how the Deck looks or moves                           |
-| [`IDE_FOUNDATION.md`](IDE_FOUNDATION.md)                                                                        | You are touching the editor, LSP or DAP                                |
-| [`SECURITY.md`](SECURITY.md)                                                                                    | You are touching the agent, the policy gate or a process boundary      |
-| [`chromium/README.md`](chromium/README.md) · [`chromium/SHELL_ARCHITECTURE.md`](chromium/SHELL_ARCHITECTURE.md) | You are working on the fork or the Shell interface                     |
-| [`chromium/RELEASING.md`](chromium/RELEASING.md) · [`chromium/SHIPPABLE.md`](chromium/SHIPPABLE.md)             | You are cutting a release                                              |
-| [`CHANGELOG.md`](CHANGELOG.md)                                                                                  | You want to know what changed                                          |
-| [`sync/README.md`](sync/README.md)                                                                              | You want to run the sync or identity service, or change the protocol   |
+| Document                                                                                                        | Read it when                                                                              |
+| :-------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------- |
+| [Getting Started](docs/getting-started.md)                                                                      | You have just installed it                                                                |
+| [Agent Workflows](docs/agent-workflows.md) · [Permission Modes](docs/permission-modes.md)                       | You are giving the agent work                                                             |
+| [Document Studio](docs/document-studio.md) · [Settings Sync](docs/settings-sync.md)                             | You want the rendered docs or the same setup on two machines                              |
+| [Local models](docs/local-llm-plan.md)                                                                          | Running the agent and Ask on a model on this Mac: what is built (Ollama), what is planned |
+| [Devices plan](docs/device-sync-plan.md)                                                                        | Tabs from your other devices, and sending things between them (a plan)                    |
+| [`PRD.md`](PRD.md) · [`ROADMAP.md`](ROADMAP.md)                                                                 | You want to know what it is for and where it is going                                     |
+| [`DESIGN.md`](DESIGN.md)                                                                                        | You are changing how the Deck looks or moves                                              |
+| [`IDE_FOUNDATION.md`](IDE_FOUNDATION.md)                                                                        | You are touching the editor, LSP or DAP                                                   |
+| [`SECURITY.md`](SECURITY.md)                                                                                    | You are touching the agent, the policy gate or a process boundary                         |
+| [`chromium/README.md`](chromium/README.md) · [`chromium/SHELL_ARCHITECTURE.md`](chromium/SHELL_ARCHITECTURE.md) | You are working on the fork or the Shell interface                                        |
+| [`chromium/RELEASING.md`](chromium/RELEASING.md) · [`chromium/SHIPPABLE.md`](chromium/SHIPPABLE.md)             | You are cutting a release                                                                 |
+| [`CHANGELOG.md`](CHANGELOG.md)                                                                                  | You want to know what changed                                                             |
+| [`sync/README.md`](sync/README.md)                                                                              | You want to run the sync or identity service, or change the protocol                      |
 
 ## Contributing
 

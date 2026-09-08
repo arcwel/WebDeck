@@ -5,6 +5,54 @@ All notable changes to Arcwel WebDeck are recorded here. This project adheres to
 
 ## Unreleased
 
+### Fixed (QA pass over local models)
+
+- A local model's failures are said in a sentence: a runtime that is not
+  answering names its endpoint and how to start it, an answer cut off
+  mid-stream says so, and a plan that stalls is bounded instead of spinning.
+- A tool call whose arguments the model garbled is refused and ends the turn,
+  rather than running the tool with an empty input. A model's plan goes through
+  the same bounds as a user's edit of it. A cloud id the build does not offer
+  is refused, and the composer's fallback list names the real Haiku id.
+- A model whose capability probe failed is still offered (as able to call
+  tools) and probed again on the next look, instead of being hidden or marked
+  incapable for the cache window. A settings file that cannot be read is
+  reported rather than silently replaced by defaults.
+
+### Fixed (menus never blank the page)
+
+- **Opening a menu no longer blanks the page.** The native page view paints
+  above the shell's DOM, so a menu that overlaps the page can only show once
+  the view hides — and hiding it left the page blank behind every menu, even a
+  picker in the dock that never touched the page. Now a popover registers as
+  an overlay only while some part of it actually lies over the stage
+  (re-checked as it resizes), so a menu inside a block or the dock leaves the
+  page live. When an overlay does cover the page — a top-bar menu, the
+  omnibox dropdown, the palette, Settings — the stage first takes a still of
+  the page (a new `Shell.CaptureStage`, copied from the compositor surface
+  and JPEG-encoded off the UI thread), paints it in the view's place, and only
+  then hides the view; the still lingers for a beat when the view returns.
+  In split view only the primary stage is copied. The Deck's resize handles
+  are hidden while the Deck is folded, so they cannot show through the still.
+
+### Added (local models)
+
+- **The agent and Ask can run on a model on this Mac.** Every model call now
+  goes through one seam with two providers behind it: Claude through the
+  Anthropic SDK, unchanged and still the reference, and Ollama through its own
+  API. Settings → AI → _On this Mac_ shows whether Ollama is installed and
+  answering, starts it, lists the models it holds with the capabilities the
+  runtime reports (tools, thinking, vision, context size), and lets each be
+  chosen for the agent or for Ask. The composer's model picker groups Cloud
+  and On this Mac, with a blue dot for a model that runs here.
+- Model ids are provider-qualified (`anthropic/claude-opus-5`,
+  `ollama/qwen3.5:9b`). A local choice is per machine and never syncs; the
+  cloud choice still does. A model that cannot call tools may answer Ask but is
+  refused for the agent, with the reason. The Agents block's banner follows
+  the choice. A local model is offered a smaller
+  tool set, and its plan is JSON shaped by the plan schema, checked and
+  retried once.
+
 ### Added (start page, Deck presets, one surface at a time)
 
 - **The start page shows real site icons**, from the profile's own favicon
@@ -31,6 +79,9 @@ All notable changes to Arcwel WebDeck are recorded here. This project adheres to
   view covers them, so they could only be grabbed over the start page. Each
   handle now sits in the gutter beside its zone, is faintly visible at rest,
   and never overlaps the stage.
+- A plan for running the agent and Ask on a local model — Ollama first, then
+  any OpenAI-compatible server — behind a provider seam that keeps Claude as
+  the reference: `docs/local-llm-plan.md`.
 - A plan for tabs from other devices and sending links and files between
   them, on the sync service that exists and an Iroh-based transport after
   DashBeam's design: `docs/device-sync-plan.md`.

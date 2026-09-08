@@ -807,9 +807,20 @@ var ShellRemote = class {
       false
     );
   }
-  openWindow(url) {
+  captureStage(tabId) {
     return this.proxy.sendMessage(
       1025856066,
+      Shell_CaptureStage_ParamsSpec.$,
+      Shell_CaptureStage_ResponseParamsSpec.$,
+      [
+        tabId
+      ],
+      false
+    );
+  }
+  openWindow(url) {
+    return this.proxy.sendMessage(
+      97704177,
       Shell_OpenWindow_ParamsSpec.$,
       Shell_OpenWindow_ResponseParamsSpec.$,
       [
@@ -820,7 +831,7 @@ var ShellRemote = class {
   }
   focusWindow(windowId) {
     this.proxy.sendMessage(
-      97704177,
+      1509102986,
       Shell_FocusWindow_ParamsSpec.$,
       null,
       [
@@ -831,7 +842,7 @@ var ShellRemote = class {
   }
   closeWindow(windowId) {
     this.proxy.sendMessage(
-      1509102986,
+      1820560745,
       Shell_CloseWindow_ParamsSpec.$,
       null,
       [
@@ -842,7 +853,7 @@ var ShellRemote = class {
   }
   pickPaths(mode) {
     return this.proxy.sendMessage(
-      1820560745,
+      991120878,
       Shell_PickPaths_ParamsSpec.$,
       Shell_PickPaths_ResponseParamsSpec.$,
       [
@@ -853,7 +864,7 @@ var ShellRemote = class {
   }
   openLocalFile(tabId) {
     return this.proxy.sendMessage(
-      991120878,
+      870934368,
       Shell_OpenLocalFile_ParamsSpec.$,
       Shell_OpenLocalFile_ResponseParamsSpec.$,
       [
@@ -1154,34 +1165,41 @@ var ShellReceiver = class {
     );
     this.helper_internal_.registerHandler(
       1025856066,
+      Shell_CaptureStage_ParamsSpec.$,
+      Shell_CaptureStage_ResponseParamsSpec.$,
+      impl.captureStage.bind(impl),
+      false
+    );
+    this.helper_internal_.registerHandler(
+      97704177,
       Shell_OpenWindow_ParamsSpec.$,
       Shell_OpenWindow_ResponseParamsSpec.$,
       impl.openWindow.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      97704177,
+      1509102986,
       Shell_FocusWindow_ParamsSpec.$,
       null,
       impl.focusWindow.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      1509102986,
+      1820560745,
       Shell_CloseWindow_ParamsSpec.$,
       null,
       impl.closeWindow.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      1820560745,
+      991120878,
       Shell_PickPaths_ParamsSpec.$,
       Shell_PickPaths_ResponseParamsSpec.$,
       impl.pickPaths.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      991120878,
+      870934368,
       Shell_OpenLocalFile_ParamsSpec.$,
       Shell_OpenLocalFile_ResponseParamsSpec.$,
       impl.openLocalFile.bind(impl),
@@ -1249,6 +1267,7 @@ var ShellCallbackRouter = class {
   getAccountInfo;
   setClient;
   setStageVisible;
+  captureStage;
   openWindow;
   focusWindow;
   closeWindow;
@@ -1781,11 +1800,24 @@ var ShellCallbackRouter = class {
       ),
       false
     );
-    this.openWindow = new mojo.internal.interfaceSupport.InterfaceCallbackReceiver(
+    this.captureStage = new mojo.internal.interfaceSupport.InterfaceCallbackReceiver(
       this.router_
     );
     this.helper_internal_.registerHandler(
       1025856066,
+      Shell_CaptureStage_ParamsSpec.$,
+      Shell_CaptureStage_ResponseParamsSpec.$,
+      this.captureStage.createReceiverHandler(
+        true
+        /* expectsResponse */
+      ),
+      false
+    );
+    this.openWindow = new mojo.internal.interfaceSupport.InterfaceCallbackReceiver(
+      this.router_
+    );
+    this.helper_internal_.registerHandler(
+      97704177,
       Shell_OpenWindow_ParamsSpec.$,
       Shell_OpenWindow_ResponseParamsSpec.$,
       this.openWindow.createReceiverHandler(
@@ -1798,7 +1830,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      97704177,
+      1509102986,
       Shell_FocusWindow_ParamsSpec.$,
       null,
       this.focusWindow.createReceiverHandler(
@@ -1811,7 +1843,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      1509102986,
+      1820560745,
       Shell_CloseWindow_ParamsSpec.$,
       null,
       this.closeWindow.createReceiverHandler(
@@ -1824,7 +1856,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      1820560745,
+      991120878,
       Shell_PickPaths_ParamsSpec.$,
       Shell_PickPaths_ResponseParamsSpec.$,
       this.pickPaths.createReceiverHandler(
@@ -1837,7 +1869,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      991120878,
+      870934368,
       Shell_OpenLocalFile_ParamsSpec.$,
       Shell_OpenLocalFile_ResponseParamsSpec.$,
       this.openLocalFile.createReceiverHandler(
@@ -2197,6 +2229,8 @@ var Shell_GetAccountInfo_ParamsSpec = { $: {} };
 var Shell_GetAccountInfo_ResponseParamsSpec = { $: {} };
 var Shell_SetClient_ParamsSpec = { $: {} };
 var Shell_SetStageVisible_ParamsSpec = { $: {} };
+var Shell_CaptureStage_ParamsSpec = { $: {} };
+var Shell_CaptureStage_ResponseParamsSpec = { $: {} };
 var Shell_OpenWindow_ParamsSpec = { $: {} };
 var Shell_OpenWindow_ResponseParamsSpec = { $: {} };
 var Shell_FocusWindow_ParamsSpec = { $: {} };
@@ -3783,6 +3817,42 @@ mojo.internal.Struct(
   [[0, 16]]
 );
 mojo.internal.Struct(
+  Shell_CaptureStage_ParamsSpec.$,
+  "Shell_CaptureStage_Params",
+  [
+    mojo.internal.StructField(
+      "tabId",
+      0,
+      0,
+      mojo.internal.Int32,
+      0,
+      false,
+      0,
+      void 0,
+      void 0
+    )
+  ],
+  [[0, 16]]
+);
+mojo.internal.Struct(
+  Shell_CaptureStage_ResponseParamsSpec.$,
+  "Shell_CaptureStage_ResponseParams",
+  [
+    mojo.internal.StructField(
+      "dataUrl",
+      0,
+      0,
+      mojo.internal.String,
+      null,
+      false,
+      0,
+      void 0,
+      void 0
+    )
+  ],
+  [[0, 16]]
+);
+mojo.internal.Struct(
   Shell_OpenWindow_ParamsSpec.$,
   "Shell_OpenWindow_Params",
   [
@@ -4106,6 +4176,8 @@ export {
   ShellPendingReceiver,
   ShellReceiver,
   ShellRemote,
+  Shell_CaptureStage_ParamsSpec,
+  Shell_CaptureStage_ResponseParamsSpec,
   Shell_ClearBrowsingData_ParamsSpec,
   Shell_ClearBrowsingData_ResponseParamsSpec,
   Shell_CloseTab_ParamsSpec,

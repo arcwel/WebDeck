@@ -114,6 +114,7 @@ class WebDeckShell : public mojom::Shell,
   void GetAccountInfo(GetAccountInfoCallback callback) override;
   void SetClient(mojo::PendingRemote<mojom::ShellClient> client) override;
   void SetStageVisible(bool visible) override;
+  void CaptureStage(int32_t tab_id, CaptureStageCallback callback) override;
   void OpenWindow(const std::string& url, OpenWindowCallback callback) override;
   void FocusWindow(int32_t window_id) override;
   void CloseWindow(int32_t window_id) override;

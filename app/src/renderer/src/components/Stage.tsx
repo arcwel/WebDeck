@@ -15,6 +15,19 @@ import { splitView } from '../../../webui/shell'
  *  survive the component's own remounts). */
 const creating = new Set<string>()
 
+/** How long the still stays under the returning live view (ms). The view's
+ *  show is a cross-process round trip; the still covers it. */
+const STILL_LINGER_MS = 150
+
+/** A still of the page behind the stage, or '' when it cannot be copied. */
+async function captureStill(tabId: string): Promise<string> {
+  try {
+    return await window.agweb.browser.captureStage(tabId)
+  } catch {
+    return ''
+  }
+}
+
 export function Stage(): React.JSX.Element {
   const activeTabId = useShellStore((s) => s.activeTabId)
   const activeTab = useShellStore((s) => s.tabs.find((t) => t.id === s.activeTabId))
@@ -94,9 +107,9 @@ export function Stage(): React.JSX.Element {
     }
 
     syncBounds()
-    // Menus/prompts render in the renderer DOM but the native view paints
-    // above it — hide the view while one is open or it swallows them (P1-12).
-    void window.agweb.browser.setVisible(activeTabId, overlayCount === 0)
+    // Shown as soon as it is glued on — unless an overlay is up, in which case
+    // the overlay effect below owns visibility (it hides the view behind a still).
+    void window.agweb.browser.setVisible(activeTabId, useShellStore.getState().overlayCount === 0)
 
     const observer = new ResizeObserver(syncBounds)
     observer.observe(el)
@@ -113,7 +126,54 @@ export function Stage(): React.JSX.Element {
       el.removeEventListener('animationend', syncBounds)
       void window.agweb.browser.setVisible(activeTabId, false)
     }
-  }, [activeTabId, hasContent, overlayCount, splitTabId, splitRatio])
+  }, [activeTabId, hasContent, splitTabId, splitRatio])
+
+  // Overlays. A menu, the palette or Settings renders in the DOM, and the native
+  // view is composited above the DOM — so the view has to hide for the overlay
+  // to show at all. Hiding it bare left the page blank behind every menu. Now
+  // the stage first takes a still of the page (Shell.CaptureStage), paints it in
+  // the view's place, and only then hides the view: the page keeps its content
+  // for as long as the overlay is up. When the last overlay closes the view
+  // comes back, and the still lingers under it for a beat so the swap never
+  // shows the bare stage. A copy that fails hides bare, as before.
+  // Both are kept per tab: the tab can change while an overlay is up (the tab
+  // switcher IS an overlay), and the new tab must get its own still — never
+  // the old tab's — and its own hide, not the old tab's leftover flag.
+  const [still, setStill] = useState<{ tab: string; url: string } | null>(null)
+  const hiddenFor = useRef<string | null>(null)
+  useEffect(() => {
+    if (!hasContent) return
+    const hidden = hiddenFor.current === activeTabId
+    if (overlayCount === 0) {
+      if (hidden) {
+        hiddenFor.current = null
+        void window.agweb.browser.setVisible(activeTabId, true)
+      }
+      const timer = window.setTimeout(() => setStill(null), STILL_LINGER_MS)
+      return () => window.clearTimeout(timer)
+    }
+    if (hidden) return
+    let cancelled = false
+    const hide = (): void => {
+      if (cancelled) return
+      hiddenFor.current = activeTabId
+      void window.agweb.browser.setVisible(activeTabId, false)
+    }
+    void captureStill(activeTabId).then((url) => {
+      if (cancelled) return
+      if (!url) {
+        hide()
+        return
+      }
+      setStill({ tab: activeTabId, url })
+      // Two frames: one for React to commit the <img>, one for it to paint
+      // under the view — then the view can go without a blank in between.
+      requestAnimationFrame(() => requestAnimationFrame(hide))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [activeTabId, hasContent, overlayCount])
 
   // Split view: bind the companion tab into the secondary backend view when
   // split opens, and unbind on close. Kept separate from bounds streaming so
@@ -162,6 +222,15 @@ export function Stage(): React.JSX.Element {
     // Keyed on the active tab so the CSS reveal (styles.css) replays each time a
     // different tab takes the stage, and once when the stage first mounts.
     <div key={activeTabId} ref={ref} className="stage bg-white dark:bg-[#101418]">
+      {still && still.tab === activeTabId && hasContent && (
+        <img
+          className="stage-still"
+          src={still.url}
+          alt=""
+          draggable={false}
+          data-testid="stage-still"
+        />
+      )}
       {activeTab?.kind === 'doc' && activeTab.docPath ? (
         <DocStudio key={activeTab.id} path={activeTab.docPath} />
       ) : (

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DragEvent, KeyboardEvent } from 'react'
 import type { AgentAttachment } from '@shared/agents'
+import type { ModelInfo } from '@shared/models'
 import { useShellStore, type ComposerSurface } from '@/store'
 import { usePopover } from '@/popover'
+import { notifyModelsChanged } from '@/models-changed'
 import {
   AttachIcon,
   FolderIcon,
@@ -26,7 +28,19 @@ import { AnchoredPopover } from '@/components/AnchoredPopover'
  * them with its own policy-gated tools, so nothing bypasses the Phase 9 gate.
  */
 
-const MODELS = ['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5'] as const
+/** Shown until the core answers with what it can actually run. */
+const FALLBACK_MODELS: ModelInfo[] = [
+  'claude-opus-5',
+  'claude-sonnet-5',
+  'claude-haiku-4-5-20251001'
+].map((id) => ({
+  id: `anthropic/${id}`,
+  provider: 'anthropic',
+  model: id,
+  label: id,
+  local: false,
+  capabilities: { tools: true, thinking: true, vision: true }
+}))
 
 const SLASH_COMMANDS: { name: string; hint: string; template: string }[] = [
   { name: '/plan', hint: 'Plan without executing', template: 'Plan (do not execute yet): ' },
@@ -61,7 +75,30 @@ export function Composer({
   const [modelOpen, setModelOpen] = useState(false)
   const [permOpen, setPermOpen] = useState(false)
   const policy = usePolicyStatus()
-  const [model, setModel] = useState<string>(MODELS[0])
+  const [models, setModels] = useState<ModelInfo[]>(FALLBACK_MODELS)
+  const [model, setModel] = useState<string>(FALLBACK_MODELS[0].id)
+  // The list and the choice are the core's: a local model appears only when
+  // its runtime answers, and choosing one here is the same act as choosing it
+  // under Settings → AI.
+  useEffect(() => {
+    let live = true
+    void window.agweb.models
+      .list()
+      .then((result) => {
+        if (!live) return
+        setModels(result.models.filter((m) => m.capabilities.tools))
+        setModel(result.selection.agent)
+      })
+      .catch((err: unknown) => {
+        // The fallback list stays, but the reason is shown where the picker's
+        // own refusals show, so a core that cannot answer is not mistaken for
+        // "only Claude here".
+        if (live) setError(err instanceof Error ? err.message : String(err))
+      })
+    return () => {
+      live = false
+    }
+  }, [])
   const [mention, setMention] = useState<{ query: string; at: number } | null>(null)
   const [slash, setSlash] = useState(false)
   const [files, setFiles] = useState<string[]>([])
@@ -417,24 +454,53 @@ export function Composer({
               onClick={() => setModelOpen((o) => !o)}
               className="flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 text-[11px] text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
               aria-label="Model"
+              title={
+                model.startsWith('ollama/') ? 'Runs on this Mac — nothing leaves it' : undefined
+              }
             >
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
-              {model.replace('claude-', '')}
+              <span
+                className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                  model.startsWith('ollama/') ? 'bg-sky-500' : 'bg-emerald-500'
+                }`}
+              />
+              {model.replace(/^[a-z]+\//, '').replace('claude-', '')}
+              {model.startsWith('ollama/') && <span className="text-slate-400"> · local</span>}
             </button>
             {modelOpen && (
-              <div className="absolute bottom-full left-0 mb-1.5 w-48 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-[#0e1420]">
-                {MODELS.map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => {
-                      setModel(m)
-                      setModelOpen(false)
-                    }}
-                    className="block w-full px-3 py-1.5 text-left text-xs hover:bg-slate-100 dark:hover:bg-slate-800"
-                  >
-                    {m}
-                  </button>
-                ))}
+              <div className="absolute bottom-full left-0 mb-1.5 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-[#0e1420]">
+                {(['Cloud', 'On this Mac'] as const).map((group) => {
+                  const inGroup = models.filter((m) => (group === 'Cloud') !== m.local)
+                  if (inGroup.length === 0) return null
+                  return (
+                    <div key={group}>
+                      <div className="px-3 pb-0.5 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                        {group}
+                      </div>
+                      {inGroup.map((m) => (
+                        <button
+                          key={m.id}
+                          onClick={() => {
+                            const previous = model
+                            setModel(m.id)
+                            setModelOpen(false)
+                            void window.agweb.models
+                              .use('agent', m.id)
+                              .then(notifyModelsChanged)
+                              .catch((err: unknown) => {
+                                setModel(previous)
+                                setError(err instanceof Error ? err.message : String(err))
+                              })
+                          }}
+                          className={`block w-full px-3 py-1.5 text-left text-xs hover:bg-slate-100 dark:hover:bg-slate-800 ${
+                            m.id === model ? 'font-semibold' : ''
+                          }`}
+                        >
+                          {m.model}
+                        </button>
+                      ))}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>

@@ -21,6 +21,7 @@ import type { EditorCommandResponse } from '../shared/ipc'
 import { registerAppSettingsRpc } from './domains/app-settings'
 import { registerFileGrantsRpc, restoreOpenedFiles } from './domains/file-grants'
 import { registerHistoryImportRpc } from './domains/history-import'
+import { registerModelsRpc } from './domains/models/registry'
 import {
   abortPendingPrompts,
   audit,
@@ -112,6 +113,7 @@ export async function startWebdeckCore(opts: CoreServerOptions = {}): Promise<Ws
   // the files they read have to be readable again before the first tab asks.
   restoreOpenedFiles()
   registerHistoryImportRpc()
+  registerModelsRpc()
   registerPolicyRpc()
   registerGitRpc()
   registerRestRpc()

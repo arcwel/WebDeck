@@ -38,6 +38,7 @@ const SECONDARY = [
   IpcChannels.browserStop,
   IpcChannels.browserSetVisible,
   IpcChannels.browserSetCornerRadius,
+  IpcChannels.browserCaptureStage,
   IpcChannels.browserDevTools,
   IpcChannels.browserFind,
   IpcChannels.browserFindStop,

@@ -647,6 +647,9 @@ export const IpcChannels = {
   browserSetBounds: 'browser:set-bounds',
   browserSetVisible: 'browser:set-visible',
   browserSetCornerRadius: 'browser:set-corner-radius',
+  // A still of the staged page (fork only, over the Mojo Shell): the stage
+  // shows it while the native view is hidden under an overlay. See Stage.tsx.
+  browserCaptureStage: 'browser:capture-stage',
   browserDevTools: 'browser:devtools',
   browserFind: 'browser:find',
   browserFindStop: 'browser:find-stop',
@@ -748,6 +751,10 @@ export const IpcChannels = {
   agentKeyStatus: 'agent:key-status',
   agentSetKey: 'agent:set-key',
   agentSetModel: 'agent:set-model',
+  modelsList: 'models:list',
+  modelsUse: 'models:use',
+  modelsStatus: 'models:status',
+  modelsStart: 'models:start',
   agentOpenReport: 'agent:open-report',
   agentClearFinished: 'agent:clear-finished',
   debugStart: 'debug:start',
@@ -1213,6 +1220,9 @@ export interface AgwebApi {
     setVisible(tabId: string, visible: boolean): Promise<void>
     /** Round the native view's corners to match the stage frame (0 = square). */
     setCornerRadius(tabId: string, radius: number): Promise<void>
+    /** A still of the page as painted right now — a data: URL, or '' when
+     *  nothing could be copied. Shown in place of the hidden native view. */
+    captureStage(tabId: string): Promise<string>
     openDevTools(tabId: string): Promise<void>
     /** Find in page; `next` advances through matches. */
     find(tabId: string, query: string, next: boolean): Promise<void>
@@ -1300,6 +1310,17 @@ export interface AgwebApi {
   }
 
   /** Claude-powered agent sessions: plan → approve → execute in the workspace. */
+  /** Models the agent and Ask run on, cloud and local, and which is in force. */
+  models: {
+    list(): Promise<import('./models').ModelsListResult>
+    /** A provider-qualified id, or null to go back to the cloud choice for that role. */
+    use(
+      role: import('./models').ModelRole,
+      id: string | null
+    ): Promise<import('./models').ModelsListResult>
+    status(): Promise<import('./models').ModelRuntimeStatus[]>
+    start(provider: import('./models').ProviderId): Promise<import('./models').ModelRuntimeStatus>
+  }
   agents: {
     /** Start planning a task; resolves to the new session id. Attachments are
      *  passed to the model as explicit, named context. */

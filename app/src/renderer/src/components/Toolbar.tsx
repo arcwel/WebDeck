@@ -542,7 +542,11 @@ function ProfileButton(): React.JSX.Element {
 
   const refresh = useCallback(() => {
     void window.agweb.profiles.list().then(setState)
-    void window.agweb.profiles.googleStatus().then(setGoogle)
+    // The per-profile Google map only feeds the menu drawn when the host does
+    // NOT own sign-in; where the browser does, the account comes from it.
+    if (!window.agweb.host.ownsBrowserFeatures) {
+      void window.agweb.profiles.googleStatus().then(setGoogle)
+    }
   }, [])
   useEffect(() => {
     if (open) refresh()

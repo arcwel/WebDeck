@@ -19,11 +19,19 @@ export class JsonStore<T> {
     return join(coreEnv().userDataDir, `${this.name}.json`)
   }
 
+  /** The stored value over the defaults. A file that is not there yet is the
+   *  normal first run and says nothing; a file that cannot be read or parsed
+   *  is reported once per read, because silently falling back to the defaults
+   *  is how a choice (a model, a setting) quietly reverts. */
   read(): T {
     try {
       const raw = readFileSync(this.file, 'utf8')
       return { ...this.defaults, ...(JSON.parse(raw) as T) }
-    } catch {
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        const reason = error instanceof Error ? error.message : String(error)
+        console.warn(`[json-store] ${this.file}: ${reason}; using defaults`)
+      }
       return this.defaults
     }
   }

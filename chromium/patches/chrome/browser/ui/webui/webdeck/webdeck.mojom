@@ -237,6 +237,14 @@ interface Shell {
   // paint over them.
   SetStageVisible(bool visible);
 
+  // A still of the staged tab as it is painted right now — a data: URL
+  // (image/jpeg), or "" when there is nothing to copy (no tab, no surface yet).
+  // The shell shows it in the stage for as long as it hides the native view
+  // under one of its overlays, so the page keeps its content behind a menu
+  // instead of going blank. Only the primary stage is copied; tab_id 0 is
+  // the active tab, as for GetPageText.
+  CaptureStage(int32 tab_id) => (string data_url);
+
   // Open another WebDeck window whose shell page loads `url` (chrome://webdeck
   // with a #deck or #float:<group> role). Returns the window id (0 = refused).
   OpenWindow(string url) => (int32 window_id);

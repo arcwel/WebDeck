@@ -58,7 +58,7 @@ WebDeck browser window
 
 - **`<webview>` inside an app-mode WebUI** — simpler to position, but guest views
   are second-class: weaker process model, missing extension/devtools/permission
-  surfaces, and a maintenance cliff. WebDeck is a *browser*; its tabs must be real.
+  surfaces, and a maintenance cliff. WebDeck is a _browser_; its tabs must be real.
 - **Rewriting `BrowserView`/`TabStripModel` wholesale** — unnecessary. We keep
   Chromium's `Browser`/`TabStripModel` as the tab backend and add a WebDeck window
   presentation on top (the DevTools pattern proves a WebUI can own the layout
@@ -94,22 +94,24 @@ channels because today Chrome owns the chrome. Flipping to "WebDeck owns the
 window" means giving those stubs a real Mojo-backed implementation. The shell's
 `browser.*` surface maps almost 1:1 onto the DevTools/tab model — and critically,
 **the shell already streams the stage rect**: `Stage` calls `browser.setBounds`
-+ `browser.setCornerRadius` every frame via its ResizeObserver, exactly the
-Electron `WebContentsView` pipe. So the renderer barely changes; it just needs the
-host bridge pointed at Mojo.
 
-| Shell call (`window.agweb.browser.*`) | Mojo Shell method | Notes |
-| :-- | :-- | :-- |
-| `create(url)` | `CreateTab` | → `TabStripModel` add |
-| `destroy(id)` | `CloseTab` | |
-| `navigate(id,url)` / `reload` / `stop` / `back` / `forward` | nav controls | |
-| `setBounds(id,rect)` | **`SetStageBounds`** | the stage rect — DevTools `setInspectedPageBounds` analog |
-| `setCornerRadius(r)` | `SetStageCornerRadius` | the Stage-reveal rounded frame |
-| `setVisible(id,bool)` | `SetTabVisible` | only active tab paints |
-| `onState(cb)` | observer → renderer | url/title/canGoBack/Forward/loading/favicon |
-| `onOpenTab` / `onAdoptTab` / `onOpenDoc` | observer → renderer | new-window→tab, doc routing |
-| `find` / `findStop` / `onFindResult` | find-in-page | Chromium find controller |
-| `zoom` / `print` / `openDevTools` | passthrough | Chromium built-ins |
+- `browser.setCornerRadius` every frame via its ResizeObserver, exactly the
+  Electron `WebContentsView` pipe. So the renderer barely changes; it just needs the
+  host bridge pointed at Mojo.
+
+| Shell call (`window.agweb.browser.*`)                       | Mojo Shell method      | Notes                                                                                                                                 |
+| :---------------------------------------------------------- | :--------------------- | :------------------------------------------------------------------------------------------------------------------------------------ |
+| `create(url)`                                               | `CreateTab`            | → `TabStripModel` add                                                                                                                 |
+| `destroy(id)`                                               | `CloseTab`             |                                                                                                                                       |
+| `navigate(id,url)` / `reload` / `stop` / `back` / `forward` | nav controls           |                                                                                                                                       |
+| `setBounds(id,rect)`                                        | **`SetStageBounds`**   | the stage rect — DevTools `setInspectedPageBounds` analog                                                                             |
+| `setCornerRadius(r)`                                        | `SetStageCornerRadius` | the Stage-reveal rounded frame                                                                                                        |
+| `setVisible(id,bool)`                                       | `SetStageVisible`      | hidden while a shell overlay covers the stage; the split secondary follows                                                            |
+| `captureStage(id)`                                          | `CaptureStage`         | a still of the page (JPEG data: URL) the stage shows in the view's place while it is hidden — the page never goes blank behind a menu |
+| `onState(cb)`                                               | observer → renderer    | url/title/canGoBack/Forward/loading/favicon                                                                                           |
+| `onOpenTab` / `onAdoptTab` / `onOpenDoc`                    | observer → renderer    | new-window→tab, doc routing                                                                                                           |
+| `find` / `findStop` / `onFindResult`                        | find-in-page           | Chromium find controller                                                                                                              |
+| `zoom` / `print` / `openDevTools`                           | passthrough            | Chromium built-ins                                                                                                                    |
 
 `windows.*` (newWindow, openDeck/closeDeck/focusDeck, state sync) backs the
 detached-IDE-window phase; not needed for the first single-window milestone.

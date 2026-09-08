@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { AiProvider, SecretsStatus } from '@shared/ipc'
 import { useShellStore } from '@/store'
+import { LocalModels } from '@/components/LocalModels'
 
 /**
  * AI providers.
@@ -80,7 +81,11 @@ export function AiSettings(): React.JSX.Element {
               const previous = model
               const next = e.target.value
               setModel(next)
-              void window.agweb.agents.setModel(next).catch(() => setModel(previous))
+              // Through the registry, so choosing a cloud model also clears any
+              // local choice that was standing in for the agent.
+              void window.agweb.models
+                .use('agent', `anthropic/${next}`)
+                .catch(() => setModel(previous))
             }}
             className="ml-auto rounded-md border border-[var(--wd-glass-border)] bg-[var(--wd-field)] px-2 py-1 text-[11px] outline-none focus:border-[var(--wd-accent)]"
             aria-label="Agent model"
@@ -97,10 +102,12 @@ export function AiSettings(): React.JSX.Element {
           </select>
         </div>
         <p className="mt-0.5 text-[11px] text-[var(--wd-dim)]">
-          The agent runs on Claude. OpenAI and Gemini keys below are stored for tools that use them;
-          running the agent itself on those providers is a planned addition.
+          The cloud choice, synced between your machines. OpenAI and Gemini keys below are stored
+          for tools that use them. A model on this Mac can take over below.
         </p>
       </section>
+
+      <LocalModels />
 
       {status && !status.encryptionAvailable && status.source.mode === 'stored' && (
         <p className="rounded-lg bg-amber-500/10 px-3 py-2 text-[11px] text-amber-600 dark:text-amber-400">

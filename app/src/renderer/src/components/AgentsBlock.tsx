@@ -4,6 +4,7 @@ import { monaco } from '@/monaco'
 import { useMonacoReady } from '@/monaco-ready'
 import { useShellStore, type ComposerSurface } from '@/store'
 import { usePopover } from '@/popover'
+import { onModelsChanged } from '@/models-changed'
 import { CloseIcon } from '@/components/icons'
 import { PermissionPopover, usePolicyStatus } from '@/components/PermissionPopover'
 import { AnchoredPopover } from '@/components/AnchoredPopover'
@@ -188,12 +189,20 @@ export function AgentsBlock({
 
 /** API-key entry, shown until a key is configured (hidden for the mock provider). */
 function KeyBanner(): React.JSX.Element | null {
-  const [status, setStatus] = useState<{ configured: boolean; mock: boolean; model: string }>()
+  const [status, setStatus] = useState<{
+    configured: boolean
+    mock: boolean
+    model: string
+    provider?: string
+    local?: boolean
+  }>()
   const [key, setKey] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    void window.agweb.agents.keyStatus().then(setStatus)
+    const refresh = (): void => void window.agweb.agents.keyStatus().then(setStatus)
+    refresh()
+    return onModelsChanged(refresh)
   }, [])
 
   if (!status || status.configured || status.mock) return null
@@ -205,6 +214,17 @@ function KeyBanner(): React.JSX.Element | null {
     setStatus(next)
     setKey('')
     setSaving(false)
+  }
+
+  if (status.local) {
+    return (
+      <div className="flex flex-none items-center gap-2 border-b border-amber-300/50 bg-amber-50 px-2.5 py-2 dark:bg-amber-500/10">
+        <span className="text-amber-700 dark:text-amber-400">
+          {status.model} runs on this Mac, but Ollama is not answering. Start it under Settings →
+          AI.
+        </span>
+      </div>
+    )
   }
 
   return (

@@ -282,6 +282,18 @@ body,
   animation: wd-stage-reveal 0.18s cubic-bezier(0.32, 0.72, 0, 1) both;
   transform-origin: center;
 }
+/* The still of the page the stage shows while its native view is hidden under
+   an overlay (Stage.tsx). It is the view's exact pixels at the view's exact
+   size, so it fills the frame edge to edge; the stage's rounding clips it. */
+.stage-still {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  user-select: none;
+}
 @keyframes wd-stage-reveal {
   from {
     opacity: 0.4;
@@ -516,6 +528,12 @@ body,
 .deck-resize:hover,
 .deck-resize.dragging {
   opacity: 1;
+}
+/* Folded, the Deck's gutters lie under the stage and the handles with them.
+   The native view used to paint over them; the still shown under an overlay
+   (Stage.tsx) is DOM, so they would show through it as faint lines. */
+.workspace:not(.revealed) .deck-resize {
+  display: none;
 }
 .deck-resize::after {
   content: '';

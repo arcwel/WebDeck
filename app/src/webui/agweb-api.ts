@@ -76,6 +76,7 @@ export function createAgwebApi(ipcRenderer: IpcLike, host: HostCapabilities): Ag
         ipcRenderer.invoke(IpcChannels.browserSetVisible, tabId, visible),
       setCornerRadius: (tabId, radius) =>
         ipcRenderer.invoke(IpcChannels.browserSetCornerRadius, tabId, radius),
+      captureStage: (tabId) => ipcRenderer.invoke(IpcChannels.browserCaptureStage, tabId),
       openDevTools: (tabId) => ipcRenderer.invoke(IpcChannels.browserDevTools, tabId),
       find: (tabId, query, next) => ipcRenderer.invoke(IpcChannels.browserFind, tabId, query, next),
       findStop: (tabId) => ipcRenderer.invoke(IpcChannels.browserFindStop, tabId),
@@ -220,6 +221,12 @@ export function createAgwebApi(ipcRenderer: IpcLike, host: HostCapabilities): Ag
       html: (html, name) => ipcRenderer.invoke(IpcChannels.exportHtml, html, name),
       pdf: (html, name) => ipcRenderer.invoke(IpcChannels.exportPdf, html, name),
       capture: (rect, name) => ipcRenderer.invoke(IpcChannels.exportCapture, rect, name)
+    },
+    models: {
+      list: () => ipcRenderer.invoke(IpcChannels.modelsList),
+      use: (role, id) => ipcRenderer.invoke(IpcChannels.modelsUse, role, id),
+      status: () => ipcRenderer.invoke(IpcChannels.modelsStatus),
+      start: (provider) => ipcRenderer.invoke(IpcChannels.modelsStart, provider)
     },
     agents: {
       start: (task, attachments) => ipcRenderer.invoke(IpcChannels.agentStart, task, attachments),

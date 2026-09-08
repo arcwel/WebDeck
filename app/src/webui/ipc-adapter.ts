@@ -72,6 +72,11 @@ export const SHELL_OWNED: Record<string, (...args: unknown[]) => unknown> = {
   [IpcChannels.proxyStatus]: () => ({ enabled: false, allowlist: [] }),
   [IpcChannels.proxySetEnabled]: () => ({ enabled: false, allowlist: [] }),
   [IpcChannels.browserZoom]: () => 0,
+  // Sign-in is Chromium's on this build: the profile button reads the account
+  // from the Shell (profiles:account), so the per-profile Google map Electron
+  // kept has nobody to fill it. Empty, not an error — the toolbar asks for it
+  // whenever its menu opens.
+  [IpcChannels.profilesGoogleStatus]: () => ({}),
   [IpcChannels.extList]: () => [],
   // Chromium installs, lists and removes extensions itself, at
   // chrome://extensions — there is no unpacked-from-a-path load for us to

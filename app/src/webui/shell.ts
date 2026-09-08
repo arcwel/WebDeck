@@ -30,6 +30,8 @@ import type {
 interface ShellRemote {
   setStageBounds(stage: { x: number; y: number; width: number; height: number }): void
   setStageVisible(visible: boolean): void
+  // A still of the staged tab (data: URL, '' when nothing could be copied).
+  captureStage(tabId: number): Promise<{ dataUrl: string }>
   openWindow(url: string): Promise<{ windowId: number }>
   focusWindow(windowId: number): void
   closeWindow(windowId: number): void
@@ -559,6 +561,10 @@ export const SHELL_BROWSER: Record<string, (...args: unknown[]) => Promise<unkno
     if (visible) shell.selectTab(handleFor(shellId))
     shell.setStageVisible(Boolean(visible))
   },
+  // The still the stage shows while it is hidden: the page keeps its content
+  // behind a menu instead of going blank.
+  [IpcChannels.browserCaptureStage]: async (shellId) =>
+    (await getShell()).captureStage(handleFor(shellId)).then((r) => r.dataUrl),
   // The native open panel, which reports real paths (Shell.PickPaths). Only a
   // privileged shell page may learn where a file lives; the core then opens the
   // project / reads the attachment by that path, exactly as Electron's did.
