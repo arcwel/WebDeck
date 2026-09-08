@@ -48,6 +48,7 @@ Three things follow from that ordering:
 - **Extensions** from the Chrome Web Store, per profile.
 - **Ad and tracker blocking** with a live blocked count, third-party cookie controls, Do Not Track, HTTPS-Only mode.
 - A summonable **favourites bar** that floats above the page and can be pinned.
+- **It tells you when there is a newer release.** On launch and once a day WebDeck reads the repository's releases on this build's channel; when one is newer, an **Update** chip appears beside Ask with the notes. **Update now** downloads the build into Downloads, checks it against the release's published checksum, unpacks it and shows it in Finder; you drag it to Applications and relaunch. Nothing downloads until you ask; Settings → Application → About has Check now.
 - **Menus never blank the page.** A menu that stays inside its block or the dock leaves the page live. One that opens over the page — the toolbar menus, the address dropdown, the palette, Settings — sits on a still of the page taken the instant it opens, so what you were reading stays in view.
 
 ### The Dev Deck

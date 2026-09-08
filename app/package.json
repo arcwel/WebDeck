@@ -1,7 +1,7 @@
 {
   "name": "webdeck",
-  "version": "0.1.0",
-  "description": "Arcwel WebDeck \u2014 an agent-first browser with a summonable IDE",
+  "version": "0.1.3",
+  "description": "Arcwel WebDeck — an agent-first browser with a summonable IDE",
   "private": true,
   "license": "MIT",
   "scripts": {

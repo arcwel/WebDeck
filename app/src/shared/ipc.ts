@@ -755,6 +755,13 @@ export const IpcChannels = {
   modelsUse: 'models:use',
   modelsStatus: 'models:status',
   modelsStart: 'models:start',
+  // The release checker (core): what it last found, ask it now, "not now".
+  updatesStatus: 'updates:status',
+  updatesCheck: 'updates:check',
+  updatesDismiss: 'updates:dismiss',
+  updatesDownload: 'updates:download',
+  updatesCancelDownload: 'updates:cancel-download',
+  updatesReveal: 'updates:reveal',
   agentOpenReport: 'agent:open-report',
   agentClearFinished: 'agent:clear-finished',
   debugStart: 'debug:start',
@@ -879,6 +886,8 @@ export const IpcEvents = {
   shellShortcut: 'event:shell-shortcut',
   terminalAdopt: 'event:terminal-adopt',
   syncStatusChanged: 'event:sync-status',
+  /** The release checker's answer changed (a check started, finished, or was dismissed). */
+  updateStatusChanged: 'event:update-status',
   syncPulled: 'event:sync-pulled',
   themeChanged: 'event:theme-changed',
   jupyterOutput: 'event:jupyter-output'
@@ -1311,6 +1320,20 @@ export interface AgwebApi {
 
   /** Claude-powered agent sessions: plan → approve → execute in the workspace. */
   /** Models the agent and Ask run on, cloud and local, and which is in force. */
+  /** Releases newer than this build, on its channel. See shared/updates.ts. */
+  updates: {
+    status(): Promise<import('./updates').UpdateStatus>
+    check(): Promise<import('./updates').UpdateStatus>
+    dismiss(version: string): Promise<import('./updates').UpdateStatus>
+    /** Fetch the available release's build into Downloads, verify it, unpack a
+     *  zip and reveal it. Progress arrives through onChanged. */
+    download(): Promise<import('./updates').UpdateStatus>
+    cancelDownload(): Promise<import('./updates').UpdateStatus>
+    /** Show the downloaded build in Finder again. */
+    reveal(): Promise<import('./updates').UpdateStatus>
+    onChanged(listener: (status: import('./updates').UpdateStatus) => void): () => void
+  }
+
   models: {
     list(): Promise<import('./models').ModelsListResult>
     /** A provider-qualified id, or null to go back to the cloud choice for that role. */

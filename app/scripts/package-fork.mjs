@@ -33,6 +33,7 @@
 //                                 [--keep-stage]
 // Exit codes: 0 packaged · 1 the build is unfit, or packaging failed · 2 could not run
 import { Buffer } from 'node:buffer'
+import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 import {
   cpSync,
@@ -45,7 +46,8 @@ import {
   readdirSync,
   rmSync,
   statSync,
-  symlinkSync
+  symlinkSync,
+  writeFileSync
 } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -645,7 +647,7 @@ try {
     if (matches.length === 0) {
       cannotRun(
         identityArg === 'auto'
-          ? `no "Developer ID Application" certificate in the keychain. ${rows.length === 0 ? 'It holds no code-signing identity at all.' : `It holds: ${rows.map((r) => r.name).join(', ')}.`} Enrol in the Apple Developer Program, then create the certificate in Xcode (Settings → Accounts → Manage Certificates → + → Developer ID Application).`
+          ? `no "Developer ID Application" certificate in the login keychain — the kind Apple notarizes, and the only kind a release can ship with. (${rows.length === 0 ? 'The keychain holds no code-signing identity at all.' : `The keychain's ${rows.length === 1 ? 'one other identity is' : `${rows.length} other identities are`} not Developer ID and ${rows.length === 1 ? 'is' : 'are'} not used by WebDeck.`}) Enrol in the Apple Developer Program, then create the certificate in Xcode (Settings → Accounts → Manage Certificates → + → Developer ID Application). For a build that stays on this Mac: npm run dev:signing-identity, then --identity "Arcwel WebDeck Dev" --allow-dev-keychain.`
           : `no code-signing identity matching "${identityArg}". Available: ${rows.map((r) => r.name).join(', ') || 'none'}.`
       )
     }
@@ -864,6 +866,38 @@ try {
       notarize('the app', zipPath)
       rmSync(zipPath, { force: true })
     }
+  }
+
+  // ── 4b. the release archive ───────────────────────────────────────────────
+  // What "Update now" in the app downloads: the stapled app as a zip, named by
+  // WebDeck's own version (the dmg carries Chromium's), with SHA256SUMS beside
+  // it. Both go up as release assets. ditto keeps the extended attributes the
+  // signature lives in; plain zip does not.
+  {
+    const pkgVersion = JSON.parse(
+      readFileSync(join(repoRoot, 'app', 'package.json'), 'utf8')
+    ).version
+    const releaseZip = join(
+      outDir,
+      `Arcwel-WebDeck-${pkgVersion}-${gnArgs.target_cpu ?? 'arm64'}.zip`
+    )
+    rmSync(releaseZip, { force: true })
+    // The staged tree can carry a quarantine flag from wherever the build
+    // was copied. Sequestered into the zip it would come back out on every
+    // unpack and make Gatekeeper refuse a build the updater already verified;
+    // a browser download gets its own flag on the zip regardless.
+    run('/usr/bin/xattr', ['-dr', 'com.apple.quarantine', stagedApp])
+    must(
+      '/usr/bin/ditto',
+      ['-c', '-k', '--sequesterRsrc', '--keepParent', stagedApp, releaseZip],
+      'ditto (release archive)'
+    )
+    const digest = createHash('sha256').update(readFileSync(releaseZip)).digest('hex')
+    writeFileSync(join(outDir, 'SHA256SUMS'), `${digest}  ${basename(releaseZip)}\n`)
+    ok(
+      'release archive',
+      `${basename(releaseZip)} (${(statSync(releaseZip).size / 1024 / 1024).toFixed(0)} MB) + SHA256SUMS`
+    )
   }
 
   // ── 5. the disk image ─────────────────────────────────────────────────────

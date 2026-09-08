@@ -3,6 +3,7 @@ import { openSignedDocument } from '@/open-local-file'
 import { TabStrip } from '@/components/TabStrip'
 import { AssistantPanel } from '@/components/AssistantPanel'
 import { AskButton } from '@/components/AskButton'
+import { UpdateChip } from '@/components/UpdateChip'
 import { UtilitiesBar } from '@/components/UtilitiesBar'
 import { Toolbar } from '@/components/Toolbar'
 import { Stage } from '@/components/Stage'
@@ -258,6 +259,7 @@ export default function App(): React.JSX.Element {
               <div className="min-w-0 flex-1">
                 <Toolbar />
               </div>
+              <UpdateChip />
               <AskButton />
             </div>
           ) : (
@@ -268,6 +270,7 @@ export default function App(): React.JSX.Element {
                 <div className="min-w-0 flex-1">
                   <TabStrip />
                 </div>
+                <UpdateChip />
                 <AskButton />
               </div>
               <Toolbar />

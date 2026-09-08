@@ -7,6 +7,7 @@ import {
   type HistorySourceInfo
 } from '@shared/ipc'
 import { useShellStore } from '@/store'
+import type { UpdateStatus } from '@shared/updates'
 import { pickProfileImage } from '@/profile-image'
 
 /**
@@ -279,6 +280,7 @@ export function ApplicationSettings(): React.JSX.Element {
             <dt className="text-[var(--wd-dim)]">Platform</dt>
             <dd>{info.platform}</dd>
           </dl>
+          <UpdateRow />
         </Section>
       )}
 
@@ -347,6 +349,74 @@ function DownloadSettings({ settings, onChange }: DownloadSettingsProps): React.
         )}
       </div>
     </>
+  )
+}
+
+/**
+ * The release checker's answer, and a way to ask now. The core checks on
+ * launch and daily on its own; this row is for "did it look, and what did it
+ * find" — the reason a check failed lives here and nowhere louder.
+ */
+function UpdateRow(): React.JSX.Element {
+  const [status, setStatus] = useState<UpdateStatus | null>(null)
+  useEffect(() => {
+    let live = true
+    void window.agweb.updates
+      .status()
+      .then((next) => live && setStatus(next))
+      .catch(() => {
+        // An older core without the checker: the row simply stays empty.
+      })
+    const off = window.agweb.updates.onChanged((next) => live && setStatus(next))
+    return () => {
+      live = false
+      off()
+    }
+  }, [])
+  if (!status) return <></>
+  const when = status.checkedAt ? new Date(status.checkedAt).toLocaleString() : 'not yet'
+  const line = status.checking
+    ? 'Checking…'
+    : status.error
+      ? `Could not check: ${status.error}`
+      : status.available
+        ? `WebDeck ${status.available.version} is available.`
+        : status.checkedAt
+          ? 'You have the latest release.'
+          : 'Not checked yet.'
+  return (
+    <div className="flex items-center gap-2 px-2 py-1 text-[11px]" data-testid="update-row">
+      <span className="min-w-0 flex-1">
+        <span
+          className={status.error ? 'text-amber-600 dark:text-amber-400' : 'text-[var(--wd-text)]'}
+        >
+          {line}
+        </span>
+        <span className="block text-[var(--wd-dim)]">
+          Checked on launch and daily, on the {status.channel === 'pre' ? 'pre-release' : 'stable'}{' '}
+          channel · last: {when}
+        </span>
+      </span>
+      {status.available && (
+        <button
+          onClick={() => {
+            const url = status.available?.url
+            if (url) useShellStore.getState().newTab(url)
+          }}
+          className="flex-none rounded-md bg-[var(--wd-accent)] px-2 py-1 text-[11px] font-semibold text-white hover:brightness-110"
+        >
+          Open release page
+        </button>
+      )}
+      <button
+        onClick={() => void window.agweb.updates.check().then(setStatus)}
+        disabled={status.checking}
+        className="flex-none rounded-md border border-[var(--wd-glass-border)] px-2 py-1 text-[11px] hover:bg-[var(--wd-hover)] disabled:opacity-50"
+        data-testid="update-check-now"
+      >
+        Check now
+      </button>
+    </div>
   )
 }
 

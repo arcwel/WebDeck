@@ -81,6 +81,18 @@ preview pane.
 Layout **presets** — _Browsing_, _Building_, _Debugging_ — swap the whole
 arrangement at once.
 
+## Staying current
+
+WebDeck looks for a newer release when it starts and once a day after that, on
+the channel this build is on (a stable build only hears about stable releases).
+When there is one, an **Update** chip appears beside **Ask**; click it for the
+notes. **Update now** downloads the build into your Downloads folder, checks it
+against the release's published checksum, unpacks it and shows it in Finder —
+drag it to Applications, replace the old one, and relaunch. Nothing is
+downloaded until you ask. Under
+**Settings → Application → About** you can see when it last checked, why a
+check failed, and press **Check now**.
+
 ## Keyboard shortcuts
 
 | Shortcut            | Action                                                                          |

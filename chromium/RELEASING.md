@@ -170,9 +170,9 @@ It reports three things and prints the exact fix for each:
    <https://developer.apple.com/programs>. This is the part with a waiting
    period; start here.
 2. **A Developer ID Application certificate** in the login keychain. Xcode →
-   Settings → Accounts → Manage Certificates → **+** → *Developer ID
-   Application*. It must be created on this machine, or imported together with
-   its private key. An *Apple Development* or self-signed certificate signs
+   Settings → Accounts → Manage Certificates → **+** → _Developer ID
+   Application_. It must be created on this machine, or imported together with
+   its private key. An _Apple Development_ or self-signed certificate signs
    happily and is refused by the notary service.
 3. **A notarytool credential profile**, stored once in the keychain:
 
@@ -185,7 +185,7 @@ It reports three things and prints the exact fix for each:
    ```
 
    Nothing in this repository reads that password. `package-fork` passes the
-   profile *name* to `notarytool`, and the keychain hands over the secret.
+   profile _name_ to `notarytool`, and the keychain hands over the secret.
 
 With all three in place, one command produces the installer:
 
@@ -202,10 +202,13 @@ That is `package-fork --identity auto --notary-profile webdeck-notary`, which:
   secure timestamp — the browser, the helpers, the framework, `webdeck-core`
   and each native file in its runtime;
 - submits the **app** to the notary service, waits, and staples the ticket;
+- writes the release archive beside it — `Arcwel-WebDeck-<version>-arm64.zip`
+  and `SHA256SUMS` — which is what the in-app **Update now** downloads and
+  verifies; upload both with the DMG (`gh release upload v<version> <zip> SHA256SUMS`);
 - builds the DMG around the stapled app, signs the DMG, submits **it**, and
   staples that too;
-- mounts the result and asserts `spctl` says *accepted, source=Notarized
-  Developer ID*, and that `stapler validate` passes on the app inside the
+- mounts the result and asserts `spctl` says _accepted, source=Notarized
+  Developer ID_, and that `stapler validate` passes on the app inside the
   volume.
 
 Stapling both is deliberate. Notarize only the disk image and the copy the user

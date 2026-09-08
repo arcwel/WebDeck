@@ -167,7 +167,14 @@ const result = await build({
   // Sources written for ESM (electron-vite's format) use `import.meta.url` to
   // resolve bundled tools; in CJS output that is undefined, so map it to the
   // equivalent file URL of the bundle itself.
-  define: { 'import.meta.url': '__wdModuleUrl' },
+  define: {
+    'import.meta.url': '__wdModuleUrl',
+    // The core's own version, from package.json — what the release checker
+    // compares against and what Settings → About shows.
+    __WEBDECK_VERSION__: JSON.stringify(
+      JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version
+    )
+  },
   banner: {
     js: "const __wdModuleUrl = require('node:url').pathToFileURL(__filename).href;"
   },

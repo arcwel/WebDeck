@@ -1,7 +1,6 @@
-# Arcwel WebDeck (repo: arcwel/AGWeb)
+# Arcwel WebDeck (repo: arcwel/WebDeck)
 
-Arcwel WebDeck is a **standalone project in its own repository** (`arcwel/AGWeb`). It was
-originally scaffolded inside `arcwel/draftfi` by mistake and has been extracted.
+Arcwel WebDeck is a **standalone project in its own repository** (`arcwel/WebDeck`).
 
 ## Standing rules
 

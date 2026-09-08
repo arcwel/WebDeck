@@ -54,6 +54,8 @@ import { registerDevServersRpc } from './domains/dev-servers'
 import { watchWorkspace } from './domains/fs'
 import { setWorkspaceOpenedHook } from './domains/workspace'
 import { setSyncBroadcaster, setSyncPulledNotifier } from './domains/sync'
+import { registerUpdatesRpc, setUpdateBroadcaster, startUpdateChecks } from './domains/updates'
+import { appVersion } from './version'
 
 /**
  * `webdeck-core` as a standalone process — the app running on the fork.
@@ -114,6 +116,7 @@ export async function startWebdeckCore(opts: CoreServerOptions = {}): Promise<Ws
   restoreOpenedFiles()
   registerHistoryImportRpc()
   registerModelsRpc()
+  registerUpdatesRpc()
   registerPolicyRpc()
   registerGitRpc()
   registerRestRpc()
@@ -136,7 +139,7 @@ export async function startWebdeckCore(opts: CoreServerOptions = {}): Promise<Ws
   // `process.versions`; here it is the core's own build, with the browser
   // version left to the shell (the fork's UI knows its own).
   core.register(IpcChannels.appInfo, (): AppInfo => ({
-    version: process.env.WEBDECK_VERSION ?? '0.1.0',
+    version: appVersion(),
     electron: '',
     chrome: process.env.WEBDECK_CHROME_VERSION ?? '',
     platform: process.platform
@@ -189,6 +192,10 @@ export async function startWebdeckCore(opts: CoreServerOptions = {}): Promise<Ws
     push(IpcEvents.workspaceChanged, workspace)
   })
   setSyncBroadcaster((status) => push(IpcEvents.syncStatusChanged, status))
+  // The release checker: one check shortly after launch, then daily. Its
+  // answer reaches every window, where the title bar shows "Update".
+  setUpdateBroadcaster((status) => push(IpcEvents.updateStatusChanged, status))
+  startUpdateChecks()
   setSyncPulledNotifier(() => push(IpcEvents.syncPulled, null))
 
   setPolicyPromptSink((prompt) => push(IpcEvents.policyPrompt, prompt) > 0)

@@ -1,4 +1,5 @@
 import { IpcChannels, IpcEvents } from '@shared/ipc'
+import type { UpdateStatus } from '@shared/updates'
 import type {
   AgwebApi,
   AppSettings,
@@ -221,6 +222,19 @@ export function createAgwebApi(ipcRenderer: IpcLike, host: HostCapabilities): Ag
       html: (html, name) => ipcRenderer.invoke(IpcChannels.exportHtml, html, name),
       pdf: (html, name) => ipcRenderer.invoke(IpcChannels.exportPdf, html, name),
       capture: (rect, name) => ipcRenderer.invoke(IpcChannels.exportCapture, rect, name)
+    },
+    updates: {
+      status: () => ipcRenderer.invoke(IpcChannels.updatesStatus),
+      check: () => ipcRenderer.invoke(IpcChannels.updatesCheck),
+      dismiss: (version) => ipcRenderer.invoke(IpcChannels.updatesDismiss, version),
+      download: () => ipcRenderer.invoke(IpcChannels.updatesDownload),
+      cancelDownload: () => ipcRenderer.invoke(IpcChannels.updatesCancelDownload),
+      reveal: () => ipcRenderer.invoke(IpcChannels.updatesReveal),
+      onChanged: (listener) => {
+        const handler = (_event: unknown, status: UpdateStatus): void => listener(status)
+        ipcRenderer.on(IpcEvents.updateStatusChanged, handler)
+        return () => ipcRenderer.removeListener(IpcEvents.updateStatusChanged, handler)
+      }
     },
     models: {
       list: () => ipcRenderer.invoke(IpcChannels.modelsList),

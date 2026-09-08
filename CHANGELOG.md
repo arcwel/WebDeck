@@ -5,6 +5,50 @@ All notable changes to Arcwel WebDeck are recorded here. This project adheres to
 
 ## Unreleased
 
+## v0.1.3 — 2026-09-07
+
+### Fixed (a verified update opens)
+
+- **A build fetched by Update now opens without the Open Anyway step.** The
+  browser asks the kernel to quarantine every file its processes write, the
+  core included, so the downloaded archive and everything unpacked from it
+  carried the flag that makes Gatekeeper refuse a build that is not
+  notarized. The updater now clears it after the bytes have matched the
+  release's published digest — that check is the vouching the flag asks for.
+  The packager also clears it from the staged app before zipping.
+
+## v0.1.2 — 2026-09-07
+
+### Added (Update now)
+
+- **Update now fetches the new build for you.** The Update panel's Update now
+  downloads the release's build for this Mac into Downloads, checks its size
+  and its published SHA-256, unpacks the zip beside itself and shows the app
+  in Finder — installing is a drag to Applications and a relaunch. Progress,
+  cancel, and a plain reason when something goes wrong. A release with no
+  build attached still offers the release page.
+- `package-fork` now writes the release archive beside the disk image:
+  `Arcwel-WebDeck-<version>-arm64.zip` (ditto, so the signature's attributes
+  survive) and a `SHA256SUMS`. Both go up as release assets; the checker picks
+  the zip for this architecture and verifies against the sums.
+
+## v0.1.1 — 2026-09-07
+
+### Added (release checks)
+
+- **WebDeck checks for a newer release on launch and once a day.** The core
+  reads the repository's releases, keeps to this build's channel — a stable
+  build hears about stable releases only, a pre-release build about both —
+  and, when one is newer, an **Update** chip appears beside Ask. It opens a
+  small panel with the version, the notes and two choices: open the release
+  page, or not now (which keeps the chip down until a newer release appears).
+  Nothing downloads on its own. Settings → Application → About shows what the
+  checker last found, why a check failed, and a **Check now** button.
+  `WEBDECK_UPDATE_FEED` points a staged build at another feed;
+  `WEBDECK_UPDATE_CHECK=off` turns the schedule off.
+- The core's version is stamped from `package.json` at build time
+  (`WEBDECK_VERSION` still overrides it), so About and the checker agree.
+
 ### Fixed (QA pass over local models)
 
 - A local model's failures are said in a sentence: a runtime that is not
