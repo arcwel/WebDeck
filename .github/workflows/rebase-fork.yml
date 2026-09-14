@@ -1,0 +1,77 @@
+name: Rebase the fork (manual)
+
+# The rebase-and-rebuild pipeline (TASKS.md 13.7b). Like fork-verify.yml this
+# can only run on the machine that has the Chromium checkout and an hour to
+# build, so it is workflow_dispatch only and expects a self-hosted runner. A
+# dispatch with no such runner sits visibly queued; it is never falsely green.
+#
+# Steps, each of which fails the run on its own:
+#   1. rebase-fork --check   the patch set applies to the target tag (dry run)
+#   2. rebase-fork --apply   branch, apply, copy the new-file trees, fork.json
+#   3. pack + build          the shell bundle and the browser
+#   4. verify:fork:all       patches, the shell boots and opens a project, hardening
+#
+# A rebase that compiles but breaks chrome://webdeck fails at step 4. Nothing
+# here pushes: the branch, the updated fork.json and the re-cut patch are left
+# on the runner for a person to review and commit.
+
+on:
+  workflow_dispatch:
+    inputs:
+      to:
+        description: 'The Chromium tag to rebase onto (e.g. 154.0.8100.3).'
+        required: true
+      runner:
+        description: 'Runner label: a macOS arm64 machine with the checkout and depot_tools.'
+        required: true
+        default: 'self-hosted'
+      out:
+        description: 'The gn out dir to build (relative to the checkout).'
+        required: false
+        default: 'out/webdeck-release'
+
+permissions:
+  contents: read
+
+jobs:
+  rebase:
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 240
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+
+      - name: Dry run against the target tag
+        run: node scripts/rebase-fork.mjs --to "${{ inputs.to }}" --check
+
+      - name: Apply the patch set on a new branch
+        run: node scripts/rebase-fork.mjs --to "${{ inputs.to }}" --apply
+
+      - name: Pack the shell and build the browser
+        run: |
+          checkout=$(node -e "console.log(require('../chromium/fork.json').checkout)")
+          export PATH="$(dirname "$checkout")/../depot_tools:$PATH"
+          npm run pack:webui:release
+          autoninja -C "$checkout/${{ inputs.out }}" chrome/browser/ui/webui/webdeck:mojo_bindings_ts__generator
+          npm run pack:webui:release
+          autoninja -C "$checkout/${{ inputs.out }}" chrome -j 6
+
+      - name: The gates
+        run: |
+          checkout=$(node -e "console.log(require('../chromium/fork.json').checkout)")
+          git -C "$checkout" diff --binary > ../chromium/patches/upstream-edits.diff
+          npm run verify:patches
+          npm run verify:fork -- --browser "$checkout/${{ inputs.out }}/Arcwel WebDeck.app/Contents/MacOS/Arcwel WebDeck"
+          npm run verify:hardening -- --browser "$checkout/${{ inputs.out }}/Arcwel WebDeck.app/Contents/MacOS/Arcwel WebDeck" --release
+
+      - name: What to commit
+        run: |
+          echo "The rebase is on branch webdeck-base-${{ inputs.to }} in the checkout."
+          echo "chromium/fork.json and chromium/patches/upstream-edits.diff are updated in this workspace; review and commit them."
+          git -C .. status --short

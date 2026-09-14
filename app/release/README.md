@@ -25,46 +25,42 @@ Rotating the key is a breaking change for already-installed clients (they pin
 the old key), so a rotation ships in a build signed with the OLD key that
 carries the NEW key — plan it, don't do it casually.
 
-## Manifest (appcast)
+## Manifest
 
-The release process writes a plain manifest, then signs it:
+`package-fork` writes the release's manifest and, when the private key is
+present (`--update-key`, `$WEBDECK_UPDATE_KEY`, or
+`~/.webdeck/release/update-signing-key.pem`), signs it as `update.json`:
 
 ```jsonc
-// manifest.json — the release build's facts
 {
-  "channel": "stable",
-  "version": "0.2.0",
-  "pubDate": "2026-09-01T00:00:00Z",
-  "url": "https://dl.example.com/Arcwel-WebDeck-0.2.0-arm64.dmg",
-  "sha256": "<hex sha256 of the dmg>",
-  "size": 123456789,
-  "notes": "https://example.com/releases/v0.2.0",
-  "critical": false // true when it carries upstream security fixes
+  "manifest": {
+    "channel": "stable", // "pre" for a pre-release version
+    "version": "0.1.6",
+    "chromium": "153.0.8010.12", // the base the build was made from
+    "rollout": 100, // percent of installs it is offered to
+    "critical": false, // true: must not be deferred
+    "assets": [{ "name": "Arcwel-WebDeck-0.1.6-arm64.zip", "sha256": "…", "size": 255725521 }]
+  },
+  "signature": "<base64 Ed25519 over canonicalize(manifest)>",
+  "keyId": "<first 16 hex of sha256(update-pubkey.pem)>"
 }
 ```
 
-```bash
-node scripts/update-check.mjs --sign manifest.json --key ./release/update-signing-key.pem \
-  --out appcast.json
-# publish appcast.json at a stable https URL; the client reads THAT
-```
+`update.json` is uploaded as a release asset beside the zip and `SHA256SUMS`.
+The core fetches it for the newest release on its channel, verifies it against
+the pinned key, and only then offers **Update now**; a release without a valid
+manifest is shown with its page and nothing more. The signature covers a
+canonical (sorted-key) serialization of `manifest`, so key order in the file
+does not matter; the canonicalization in `scripts/update-check.mjs` and
+`app/src/shared/update-signing.ts` must stay identical.
 
-The signature covers a canonical (sorted-key) serialization of `manifest`, so
-the signer and verifier agree byte-for-byte regardless of JSON key order.
-
-## Client check
-
-```bash
-npm run update:check -- --manifest https://dl.example.com/stable/appcast.json --json
-```
-
-Exit codes: `0` up to date · `1` update available · `2` could not run · `3`
-manifest failed to verify. Code `3` is distinct on purpose — a fail-closed
-updater must never mistake a forged manifest for "nothing to do".
-
-## Out of scope here (13.7c / 13.7d)
-
-This is the **check** and the **signing** half. Downloading the dmg, verifying
-its `sha256`, swapping the app, staged rollout, rollback, and the non-modal
-in-product "update ready" prompt are 13.7c/13.7d — a wrong "update available" is
-cheap; a wrong "installed" is not, so those land deliberately, separately.
+- **Security flag.** A `chromium` newer than the running build's, or
+  `critical: true`, makes the Update chip say the release carries Chromium
+  security fixes.
+- **Staged rollout.** Each install has a stable bucket per version
+  (`rolloutBucket`); a release with `rollout: 25` is offered to a quarter of
+  installs and reported as "rolling out gradually" to the rest. Raise it by
+  re-running the packager with `--rollout 100` and re-uploading `update.json`
+  (the signature changes with the manifest, the assets do not).
+- **Going back.** The checker also resolves the release just below the running
+  one; Settings → Application → About offers it the same way.

@@ -203,8 +203,12 @@ That is `package-fork --identity auto --notary-profile webdeck-notary`, which:
   and each native file in its runtime;
 - submits the **app** to the notary service, waits, and staples the ticket;
 - writes the release archive beside it — `Arcwel-WebDeck-<version>-arm64.zip`
-  and `SHA256SUMS` — which is what the in-app **Update now** downloads and
-  verifies; upload both with the DMG (`gh release upload v<version> <zip> SHA256SUMS`);
+  and `SHA256SUMS` — and the signed update manifest `update.json` (needs the
+  release key, `app/release/README.md`); the in-app **Update now** downloads
+  only a release whose manifest verifies. Upload all three with the DMG:
+  `gh release upload v<version> <zip> <dmg> SHA256SUMS update.json`.
+  `--rollout <percent>` stages the release; `--critical` marks one that must
+  not be deferred;
 - builds the DMG around the stapled app, signs the DMG, submits **it**, and
   staples that too;
 - mounts the result and asserts `spctl` says _accepted, source=Notarized
@@ -313,3 +317,37 @@ the detail):
   patent-licensing decision, not a build flag.
 - **Rebasing on upstream security fixes** means a 2–4 hour build within days of
   each Chromium CVE. `npm run upstream:check` reports when we fall behind.
+
+## Update size, measured
+
+Every bump is a full download today. What a 0.1.5 build carries (unpacked):
+
+| Part                                | Size   | Changes when                                            |
+| :---------------------------------- | :----- | :------------------------------------------------------ |
+| Arcwel WebDeck Framework binary     | 261 MB | every Chromium rebuild                                  |
+| framework Resources (paks, locales) | 89 MB  | every Chromium rebuild; the shell bundle is 26 MB of it |
+| webdeck-core                        | 117 MB | every core change                                       |
+| helpers and libraries               | 24 MB  | rarely                                                  |
+| the zip                             | 244 MB | —                                                       |
+
+Two conclusions, so nobody re-derives them:
+
+- **A core-only or shell-only update is not a delta we can ship.** The bundle
+  is sealed by its signature as a whole; replacing files inside it on a user's
+  machine invalidates the seal, and re-signing there needs the identity we do
+  not ship. Any smaller update would have to be a whole new signed bundle.
+- **A binary diff of the framework saves little.** A Chromium point release
+  rewrites most of a 261 MB binary; measured bsdiff savings on Chromium
+  frameworks are a few percent, for a tool we would have to ship and trust. The
+  honest baseline stays: one 244 MB zip per release, staged by rollout when a
+  release is risky, with the previous release one click away.
+
+## Rebasing onto a newer Chromium
+
+`npm run rebase:fork -- --to <version> --check` says whether the patch set
+applies to the new tag without touching the working tree; `--apply` branches
+at the tag, applies with three-way merge, copies the new-file trees and
+updates `chromium/fork.json`. The workflow `.github/workflows/rebase-fork.yml`
+runs both, then the pack, the build and the three gates, on a self-hosted
+runner. `npm run upstream:check` now also reports the security fixes Chrome
+announced between our pin and upstream, so "behind" comes with a severity.

@@ -227,7 +227,7 @@ export function createAgwebApi(ipcRenderer: IpcLike, host: HostCapabilities): Ag
       status: () => ipcRenderer.invoke(IpcChannels.updatesStatus),
       check: () => ipcRenderer.invoke(IpcChannels.updatesCheck),
       dismiss: (version) => ipcRenderer.invoke(IpcChannels.updatesDismiss, version),
-      download: () => ipcRenderer.invoke(IpcChannels.updatesDownload),
+      download: (version) => ipcRenderer.invoke(IpcChannels.updatesDownload, version),
       cancelDownload: () => ipcRenderer.invoke(IpcChannels.updatesCancelDownload),
       reveal: () => ipcRenderer.invoke(IpcChannels.updatesReveal),
       onChanged: (listener) => {

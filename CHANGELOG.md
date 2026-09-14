@@ -5,6 +5,28 @@ All notable changes to Arcwel WebDeck are recorded here. This project adheres to
 
 ## Unreleased
 
+### Added (release engineering)
+
+- **Signed updates.** A release now publishes `update.json`, a manifest naming
+  its build and digest, signed with an Ed25519 key whose public half is pinned
+  in the core. Update now downloads only a release whose manifest verifies;
+  any other is shown with its page and nothing more. The packager writes and
+  signs the manifest when the release key is present.
+- **Security fixes are called out.** The manifest carries the Chromium base
+  the release was built from; a newer one than the running build's, or a
+  release marked critical, makes the Update chip say it includes Chromium
+  security fixes. `upstream:check` reports the fixes and severity Chrome
+  announced between our pin and upstream.
+- **Staged rollout.** A release can be offered to a share of installs
+  (`--rollout 25`); each install has a stable bucket per version, and About
+  says when a release is rolling out and this Mac is not in the wave yet.
+- **Going back.** About names the release before this one and downloads it the
+  same verified way, or opens its page when it predates signing.
+- **The rebase pipeline.** `npm run rebase:fork -- --to <version>` checks
+  the patch set against a newer Chromium tag without touching the tree, or
+  applies it on a new branch; a manual workflow runs that, the build and the
+  three gates on a self-hosted runner.
+
 ## v0.1.5 — 2026-09-14
 
 ### Fixed (a download that goes quiet is given up)

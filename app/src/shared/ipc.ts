@@ -1325,9 +1325,11 @@ export interface AgwebApi {
     status(): Promise<import('./updates').UpdateStatus>
     check(): Promise<import('./updates').UpdateStatus>
     dismiss(version: string): Promise<import('./updates').UpdateStatus>
-    /** Fetch the available release's build into Downloads, verify it, unpack a
-     *  zip and reveal it. Progress arrives through onChanged. */
-    download(): Promise<import('./updates').UpdateStatus>
+    /** Fetch a release's build into Downloads, verify it against its signed
+     *  manifest, unpack a zip and reveal it. The available release by default;
+     *  the previous one by version, for going back. Progress arrives through
+     *  onChanged. */
+    download(version?: string): Promise<import('./updates').UpdateStatus>
     cancelDownload(): Promise<import('./updates').UpdateStatus>
     /** Show the downloaded build in Finder again. */
     reveal(): Promise<import('./updates').UpdateStatus>

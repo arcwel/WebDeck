@@ -33,7 +33,8 @@
 //                                 [--keep-stage]
 // Exit codes: 0 packaged · 1 the build is unfit, or packaging failed · 2 could not run
 import { Buffer } from 'node:buffer'
-import { createHash } from 'node:crypto'
+import { createHash, createPrivateKey, sign as cryptoSign } from 'node:crypto'
+import { homedir } from 'node:os'
 import { spawnSync } from 'node:child_process'
 import {
   cpSync,
@@ -51,6 +52,7 @@ import {
 } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { canonicalize } from './update-check.mjs'
 
 const repoRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))))
 const DEFAULT_BUILD_DIR = '/Volumes/BG_Dev/webdeck-chromium/chromium/src/out/webdeck'
@@ -92,6 +94,16 @@ Distribution:
                                 --apple-id <you@example.com> --team-id <TEAM>
                             Requires --identity. This script never sees the
                             password; the keychain hands it to notarytool.
+  --update-key <pem>        sign the release's update manifest (update.json)
+                            with this Ed25519 private key, so the in-app
+                            updater will download it. Default: $WEBDECK_UPDATE_KEY,
+                            else ~/.webdeck/release/update-signing-key.pem when
+                            it exists. Without a key the release is published
+                            unsigned and the updater offers its page only.
+  --rollout <percent>       share of installs the release is offered to (staged
+                            rollout; default 100). Raise it by re-signing and
+                            re-uploading update.json.
+  --critical                mark the release as one that must not be deferred.
   --allow-dev-keychain      package a build compiled with
                             webdeck_dev_keychain = true anyway (it stores the
                             cookie/password key as a plaintext file, so it is
@@ -922,6 +934,51 @@ try {
       'release archive',
       `${basename(releaseZip)} (${(statSync(releaseZip).size / 1024 / 1024).toFixed(0)} MB) + SHA256SUMS`
     )
+
+    // ── 4c. the signed update manifest ─────────────────────────────────────
+    // What the in-app updater trusts: the assets with their digests, the
+    // Chromium base (a newer one than the running build's means security
+    // fixes), the rollout share and the critical flag, signed with the release
+    // key whose public half is pinned in the core (app/release/update-pubkey.pem).
+    // A digest served by the same host as the asset proves nothing on its own.
+    const manifest = {
+      channel: /-/.test(pkgVersion) ? 'pre' : 'stable',
+      version: pkgVersion,
+      chromium: version,
+      rollout: Math.max(0, Math.min(100, Number(arg('rollout', '100')) || 0)),
+      critical: flag('critical'),
+      assets: [{ name: basename(releaseZip), sha256: digest, size: statSync(releaseZip).size }]
+    }
+    writeFileSync(join(outDir, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n')
+    const keyPath =
+      arg('update-key') ||
+      process.env.WEBDECK_UPDATE_KEY ||
+      join(homedir(), '.webdeck', 'release', 'update-signing-key.pem')
+    if (existsSync(keyPath)) {
+      const privateKey = createPrivateKey(readFileSync(keyPath, 'utf8'))
+      const signature = cryptoSign(
+        null,
+        Buffer.from(canonicalize(manifest), 'utf8'),
+        privateKey
+      ).toString('base64')
+      const pubPath = join(repoRoot, 'app', 'release', 'update-pubkey.pem')
+      const keyId = existsSync(pubPath)
+        ? createHash('sha256').update(readFileSync(pubPath)).digest('hex').slice(0, 16)
+        : undefined
+      writeFileSync(
+        join(outDir, 'update.json'),
+        JSON.stringify({ manifest, signature, ...(keyId ? { keyId } : {}) }, null, 2) + '\n'
+      )
+      ok(
+        'update manifest',
+        `update.json signed (${basename(keyPath)}), rollout ${manifest.rollout}%${manifest.critical ? ', critical' : ''}`
+      )
+    } else {
+      warn(
+        'update manifest',
+        `no signing key at ${keyPath} — manifest.json written unsigned; the in-app updater will offer this release's page only. Pass --update-key or run scripts/update-check.mjs --genkey.`
+      )
+    }
   }
 
   // ── 5. the disk image ─────────────────────────────────────────────────────

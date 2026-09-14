@@ -146,6 +146,13 @@ jobs:
           say('| status | **' + result.status + '**' +
               (behind ? ' — ' + result.delta.milestones + ' milestone(s) behind. Expected; not a build failure.' : '') + ' |')
           say('| patch set | ' + patchLine + ' |')
+          const sec = result.security || { checked: false, reason: 'no data' }
+          const secLine = !sec.checked
+            ? 'not checked — ' + sec.reason
+            : sec.posts.length === 0
+              ? 'no security announcements in the range'
+              : '**' + sec.fixes + ' security fix(es)** announced in ' + sec.posts.length + ' release(s) since our pin' + (sec.highest ? ' — highest severity **' + sec.highest + '**' : '')
+          say('| security | ' + secLine + ' |')
           say('')
           if (!patches.checked) {
             say('> The patch-applicability half needs the Chromium checkout, which this runner does not have.')
@@ -167,6 +174,7 @@ jobs:
           body.push('- **upstream ' + result.channel + ' / ' + result.platform + ':** `' + result.upstream.version + '`')
           body.push('- **status:** ' + result.status)
           body.push('- **patch set:** ' + patchLine)
+          body.push('- **security:** ' + secLine)
           body.push('')
           if (conflicts > 0) {
             body.push('### Conflicting patches — act on this one')

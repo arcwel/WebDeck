@@ -1,7 +1,7 @@
 {
   "name": "webdeck",
   "version": "0.1.5",
-  "description": "Arcwel WebDeck — an agent-first browser with a summonable IDE",
+  "description": "Arcwel WebDeck \u2014 an agent-first browser with a summonable IDE",
   "private": true,
   "license": "MIT",
   "scripts": {
@@ -30,7 +30,8 @@
     "release:preflight": "node scripts/release-preflight.mjs",
     "dev:signing-identity": "node scripts/dev-signing-identity.mjs",
     "gen:mojo": "node scripts/gen-mojo-bindings.mjs",
-    "pack:webui:release": "node scripts/gen-mojo-bindings.mjs --build-dir out/webdeck-release && npm run build:webui && node scripts/pack-webui.mjs --build-dir out/webdeck-release"
+    "pack:webui:release": "node scripts/gen-mojo-bindings.mjs --build-dir out/webdeck-release && npm run build:webui && node scripts/pack-webui.mjs --build-dir out/webdeck-release",
+    "rebase:fork": "node scripts/rebase-fork.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",

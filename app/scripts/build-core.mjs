@@ -173,6 +173,18 @@ const result = await build({
     // compares against and what Settings → About shows.
     __WEBDECK_VERSION__: JSON.stringify(
       JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version
+    ),
+    // The Chromium base (chromium/fork.json) — the release checker compares a
+    // release's base against it to flag upstream security fixes.
+    __WEBDECK_CHROMIUM__: JSON.stringify(
+      JSON.parse(readFileSync(join(root, '..', 'chromium', 'fork.json'), 'utf8')).base ?? ''
+    ),
+    // The public key update manifests must verify against. Absent (a fresh
+    // clone before --genkey) means the core downloads no release in-app.
+    __WEBDECK_UPDATE_PUBKEY__: JSON.stringify(
+      existsSync(join(root, 'release', 'update-pubkey.pem'))
+        ? readFileSync(join(root, 'release', 'update-pubkey.pem'), 'utf8')
+        : ''
     )
   },
   banner: {

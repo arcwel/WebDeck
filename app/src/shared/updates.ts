@@ -29,8 +29,21 @@ export interface ReleaseInfo {
   /** The build for this machine, when the release carries one; "Update now"
    *  downloads it. Null means the release page is the only way in. */
   asset: ReleaseAsset | null
-  /** A SHA256SUMS (or <asset>.sha256) file beside the asset, if published. */
-  checksumUrl: string | null
+  /** The release published a manifest that verifies against the pinned key,
+   *  and it names `asset`. Only a signed release is downloaded in-app. */
+  signed: boolean
+  /** Why it is not signed, when it is not: no manifest, bad signature, asset
+   *  not named. Null when signed. */
+  unsignedReason: string | null
+  /** The asset's digest from the signed manifest; null when unsigned. */
+  sha256: string | null
+  /** The Chromium base the release was built from, from the manifest. */
+  chromium: string | null
+  /** The release carries Chromium security fixes (a newer base than the
+   *  running build) or the release engineer marked it critical. */
+  security: boolean
+  /** Percent of installs the release is offered to. */
+  rollout: number
 }
 
 export type DownloadPhase = 'downloading' | 'verifying' | 'unpacking' | 'done' | 'error'
@@ -62,6 +75,11 @@ export interface UpdateStatus {
   checking: boolean
   /** The download in progress or just finished, if any. */
   download: DownloadState | null
+  /** A newer release exists but is rolling out gradually and this install is
+   *  not in the current wave. Nothing is offered; About says so. */
+  staged: { version: string; rollout: number } | null
+  /** The release just below the running one on this channel, for going back. */
+  previous: ReleaseInfo | null
 }
 
 export interface ParsedVersion {

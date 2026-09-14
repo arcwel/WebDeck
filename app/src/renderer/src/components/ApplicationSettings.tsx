@@ -396,6 +396,40 @@ function UpdateRow(): React.JSX.Element {
           Checked on launch and daily, on the {status.channel === 'pre' ? 'pre-release' : 'stable'}{' '}
           channel · last: {when}
         </span>
+        {status.staged && (
+          <span className="block text-[var(--wd-dim)]" data-testid="update-staged">
+            WebDeck {status.staged.version} is rolling out gradually ({status.staged.rollout}% of
+            installs so far); this Mac is not in the current wave yet.
+          </span>
+        )}
+        {status.previous && (
+          <span className="block text-[var(--wd-dim)]" data-testid="update-previous">
+            Need to go back? {status.previous.version} is the release before this one.{' '}
+            {status.previous.asset && status.previous.signed ? (
+              <button
+                onClick={() =>
+                  void window.agweb.updates.download(status.previous?.version).then(setStatus)
+                }
+                className="underline hover:text-[var(--wd-text)]"
+                data-testid="update-go-back"
+              >
+                Download it
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  const url = status.previous?.url
+                  if (url) useShellStore.getState().newTab(url)
+                }}
+                className="underline hover:text-[var(--wd-text)]"
+              >
+                Open its release page
+              </button>
+            )}
+            {status.download?.version === status.previous.version &&
+              ` · ${status.download.phase === 'done' ? 'downloaded and unpacked into Downloads' : status.download.phase === 'error' ? status.download.error : `${status.download.phase}…`}`}
+          </span>
+        )}
       </span>
       {status.available && (
         <button

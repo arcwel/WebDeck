@@ -115,6 +115,7 @@ describe('buildResult', () => {
       'upstream',
       'delta',
       'patches',
+      'security',
       'exitCode'
     ])
     expect(result.ok).toBe(true)
@@ -168,5 +169,37 @@ describe('exitCodeFor', () => {
 
   it('is 2 whenever the check itself failed', () => {
     expect(exitCodeFor({ ok: false, status: 'current', patches: patchesClean })).toBe(2)
+  })
+})
+
+describe('securityFromPosts', () => {
+  it('counts the CVEs announced for versions in the range, by severity, ignoring Android and iOS posts', async () => {
+    const { securityFromPosts } = await import('./upstream-check.mjs')
+    const posts = [
+      {
+        title: 'Stable Channel Update for Desktop',
+        text: 'The Stable channel has been updated to 153.0.8010.36 for Windows, Mac and Linux. [$2,500][ 544163112 ] Critical CVE-2026-87464: Use after free in WebGL. [N/A][ 546252753 ] High CVE-2026-87488: Use after free. [TBD][ 548127218 ] Medium CVE-2026-87438: Out of bounds write.'
+      },
+      {
+        title: 'Chrome for Android Update',
+        text: 'Chrome 153 (153.0.8010.36) for Android has been released.'
+      },
+      {
+        title: 'Stable Channel Update for Desktop',
+        text: 'The Stable channel has been updated to 152.0.7900.10. [N/A][1] Critical CVE-2026-1: old.'
+      },
+      {
+        title: 'Stable Channel Update for Desktop',
+        text: 'Updated to 154.0.8037.17. This update includes 12 security fixes. [N/A][ 9 ] High CVE-2026-2: x.'
+      }
+    ]
+    const result = securityFromPosts(posts, '153.0.8010.12', '154.0.8037.17')
+    expect(result.checked).toBe(true)
+    expect(result.posts.map((p) => [p.version, p.fixes, p.highest])).toEqual([
+      ['153.0.8010.36', 3, 'Critical'],
+      ['154.0.8037.17', 12, 'High']
+    ])
+    expect(result.fixes).toBe(15)
+    expect(result.highest).toBe('Critical')
   })
 })

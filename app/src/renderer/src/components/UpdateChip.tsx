@@ -97,6 +97,15 @@ export function UpdateChip(): React.JSX.Element | null {
             {release.publishedAt ? ` · released ${release.publishedAt.slice(0, 10)}` : ''}
             {release.prerelease ? ' · pre-release' : ''}
           </div>
+          {release.security && (
+            <div
+              className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10.5px] font-semibold text-amber-700 dark:text-amber-400"
+              data-testid="update-security"
+            >
+              Includes Chromium security fixes
+              {release.chromium ? ` (${release.chromium})` : ''}
+            </div>
+          )}
           {release.notes && (
             <pre className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap break-words font-sans text-[11px] leading-relaxed text-[var(--wd-muted)]">
               {release.notes}
@@ -125,7 +134,7 @@ export function UpdateChip(): React.JSX.Element | null {
                 >
                   Release page
                 </button>
-                {release.asset && (
+                {release.asset && release.signed && (
                   <button
                     onClick={updateNow}
                     className="rounded-md bg-[var(--wd-accent)] px-2.5 py-1 text-[11px] font-semibold text-white hover:brightness-110"
@@ -135,6 +144,15 @@ export function UpdateChip(): React.JSX.Element | null {
                   </button>
                 )}
               </div>
+              {release.asset && !release.signed && (
+                <div
+                  className="mt-2 text-[10.5px] text-[var(--wd-dim)]"
+                  data-testid="update-unsigned"
+                >
+                  Not signed for in-app update ({release.unsignedReason}); get it from the release
+                  page.
+                </div>
+              )}
             </>
           )}
         </AnchoredPopover>

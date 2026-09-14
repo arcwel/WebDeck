@@ -100,7 +100,7 @@ export function compareVersions(a, b) {
  * passed in — so the comparison and the exit-code choice are testable without
  * a network or a checkout.
  */
-export function buildResult({ channel, platform, pinned, upstream, patches }) {
+export function buildResult({ channel, platform, pinned, upstream, patches, security }) {
   const ours = parseVersion(pinned.version)
   const theirs = parseVersion(upstream.version)
   if (!ours) throw new Error(`unparseable pinned version: ${JSON.stringify(pinned.version)}`)
@@ -119,7 +119,8 @@ export function buildResult({ channel, platform, pinned, upstream, patches }) {
       released: upstream.released ?? null
     },
     delta: { comparison, milestones: theirs[0] - ours[0] },
-    patches
+    patches,
+    security: security ?? { checked: false, reason: 'not requested' }
   }
   return { ...result, exitCode: exitCodeFor(result) }
 }
@@ -333,6 +334,18 @@ function patchLines(patches) {
   return lines
 }
 
+function securityLines(security) {
+  if (!security) return []
+  if (!security.checked) return ['', `  security      not checked — ${security.reason}`]
+  if (security.posts.length === 0)
+    return ['', '  security      no stable-channel security announcements in the range']
+  return [
+    '',
+    `  security      ${security.fixes} fix${security.fixes === 1 ? '' : 'es'} announced in ${security.posts.length} release${security.posts.length === 1 ? '' : 's'} since our pin` +
+      (security.highest ? ` — highest severity ${security.highest}` : '')
+  ]
+}
+
 function render(result) {
   const { pinned, upstream, delta, status } = result
   const released = upstream.released ? ` (released ${upstream.released.slice(0, 10)})` : ''
@@ -354,8 +367,78 @@ function render(result) {
     `  status        ${summary}`,
     '',
     ...patchLines(result.patches),
+    ...securityLines(result.security),
     ''
   ].join('\n')
+}
+
+// ── security fixes in the range ─────────────────────────────────────────────
+// Chrome's release blog announces every stable update with the count of
+// security fixes it carries and, for the ones disclosed, a severity per CVE.
+// Between our pin and upstream, those are the fixes we are shipping without —
+// the number that turns "behind" from a backlog item into a deadline.
+const RELEASE_FEED =
+  'https://chromereleases.googleblog.com/feeds/posts/default/-/Stable%20updates?alt=json&max-results=40'
+const SEVERITY_RANK = { Critical: 4, High: 3, Medium: 2, Low: 1 }
+
+/** Pure: the fixes and highest severity announced for versions in (pinned, upstream]. */
+export function securityFromPosts(posts, pinnedVersion, upstreamVersion) {
+  const ours = parseVersion(pinnedVersion)
+  const theirs = parseVersion(upstreamVersion)
+  const hits = []
+  for (const post of posts) {
+    // The desktop announcements carry the fixes; Android and iOS posts repeat
+    // the version with none.
+    if (/Android|iOS/i.test(String(post.title || ''))) continue
+    const text = String(post.text || '')
+    const versions = [...text.matchAll(/\b(\d+\.\d+\.\d+\.\d+)\b/g)].map((m) => m[1])
+    const inRange = versions.some((v) => {
+      const p = parseVersion(v)
+      return p && ours && theirs && compareVersions(p, ours) > 0 && compareVersions(p, theirs) <= 0
+    })
+    if (!inRange) continue
+    // "[$2,500][ 544163112 ] Critical CVE-2026-87464: …" — a reward (or N/A,
+    // TBD) in the first bracket, a padded bug id in the second, then the
+    // severity. The stated count ("includes N security fixes") is used when
+    // present; the listed CVEs are the floor either way.
+    const stated = /includes\s+(\d+)\s+security\s+fix/i.exec(text)
+    const severities = [
+      ...text.matchAll(/\[[^\]]*\]\s*\[\s*\d+\s*\]\s*(Critical|High|Medium|Low)\b/g)
+    ].map((m) => m[1])
+    const highest =
+      severities.slice().sort((a, b) => SEVERITY_RANK[b] - SEVERITY_RANK[a])[0] ?? null
+    hits.push({
+      title: post.title,
+      version: versions[0] ?? null,
+      fixes: Math.max(stated ? Number(stated[1]) : 0, severities.length),
+      highest
+    })
+  }
+  const highest =
+    hits
+      .map((h) => h.highest)
+      .filter(Boolean)
+      .sort((a, b) => SEVERITY_RANK[b] - SEVERITY_RANK[a])[0] ?? null
+  return {
+    checked: true,
+    posts: hits,
+    fixes: hits.reduce((n, h) => n + h.fixes, 0),
+    highest
+  }
+}
+
+async function fetchSecurity(pinnedVersion, upstreamVersion) {
+  try {
+    const feed = await fetchJson(RELEASE_FEED)
+    const entries = feed?.feed?.entry ?? []
+    const posts = entries.map((e) => ({
+      title: e.title?.$t ?? '',
+      text: String(e.content?.$t ?? e.summary?.$t ?? '').replace(/<[^>]+>/g, ' ')
+    }))
+    return securityFromPosts(posts, pinnedVersion, upstreamVersion)
+  } catch (error) {
+    return { checked: false, reason: `release blog unreachable: ${error.message}` }
+  }
 }
 
 async function main() {
@@ -378,7 +461,11 @@ async function main() {
     platform,
     pinned: { version: pin.base, source: 'chromium/fork.json' },
     upstream,
-    patches: checkPatchSet(checkout, upstream.version)
+    patches: checkPatchSet(checkout, upstream.version),
+    security:
+      compareVersions(parseVersion(pin.base), parseVersion(upstream.version)) < 0
+        ? await fetchSecurity(pin.base, upstream.version)
+        : { checked: true, posts: [], fixes: 0, highest: null }
   })
 
   console.log(options.json ? JSON.stringify(result, null, 2) : render(result))
