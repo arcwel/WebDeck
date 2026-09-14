@@ -72,6 +72,7 @@ Four things follow from that ordering:
 - Conversations rename, branch from any turn, export, and hand back to the composer.
 
 - **Or on a model on this Mac.** Settings → AI → On this Mac lists what Ollama holds, what LM Studio or any OpenAI-compatible endpoint you add is serving, and on macOS 26 Apple's own on-device model, each with the capabilities the runtime reports. Pull a model from a list sized to your memory, test one for speed before you commit, and let the agent or Ask run there. Nothing leaves the machine, no key is needed, and the choice stays on this machine. When the runtime is not answering, or a model garbles a tool call or stops mid-answer, the agent says so in a sentence and stops, rather than guessing.
+- **Scriptable.** `webdeck-core models list|use|pull|test --json` drives the same choices from a terminal or an agent, against the same data the app uses.
 
 ### A genuine IDE
 

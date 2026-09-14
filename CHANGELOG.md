@@ -5,6 +5,16 @@ All notable changes to Arcwel WebDeck are recorded here. This project adheres to
 
 ## Unreleased
 
+### Added
+
+- **`webdeck-core models` — the model choices as commands.** `list`, `use
+<id> --for agent|ask`, `pull`, `remove`, `test`, `recommend` and `endpoint
+add|remove`, against the same data directory the app uses, with `--json`
+  for scripts and an agent; exit 0 done, 1 refused with the reason, 2 usage.
+- **The Extensions block says what the host did.** Each installed extension
+  with code shows _activated in N ms_, _activation failed_ with the error,
+  or _not activated yet_; a declarative one says there is nothing to run.
+
 ### Fixed
 
 - **The page still is bounded on very large displays.** The still shown
@@ -12,6 +22,8 @@ All notable changes to Arcwel WebDeck are recorded here. This project adheres to
   6K display is a bitmap wide enough to take a tenth of a second to encode.
   Past 2,560 pixels on the longer edge the copy is scaled by the GPU; under
   a menu the difference is invisible.
+- The Debug block's hint names the adapter for the file's language instead of
+  always js-debug.
 - **The performance harness no longer hangs where process inspection is
   blocked.** Each `footprint` call is bounded and the run falls back to RSS
   with a note (`--rss` forces it); the JSON carries `memory.basis`.

@@ -226,7 +226,9 @@ export function DebugBlock(): React.JSX.Element {
               Click the editor gutter to set a breakpoint, then Debug file.
             </span>
             <span className="leading-relaxed">
-              Runs under js-debug — the adapter VS Code uses — so TypeScript and source maps work.
+              {language === 'node' || !language
+                ? 'Runs under js-debug — the adapter VS Code uses — so TypeScript and source maps work.'
+                : `Runs under the ${DEBUG_LANGUAGE_LABELS[language]} adapter found on this machine.`}
             </span>
           </div>
         )}

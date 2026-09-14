@@ -125,9 +125,18 @@ const RUNTIME_PACKAGES = [
 const SEA_PROLOGUE = `
 const { createRequire } = require('node:module')
 const __wdPath = require('node:path')
+// The runtime sits beside the binary in a plain install, and under
+// Contents/Resources in the app bundle (codesign rejects a directory under
+// Contents/MacOS). The browser names it in the environment; a hand-run core —
+// \`webdeck-core models …\` from the bundle — has to find it itself.
+const __wdFs = require('node:fs')
+const __wdBeside = __wdPath.join(__wdPath.dirname(process.execPath), 'webdeck-core-runtime')
+const __wdInBundle = __wdPath.join(
+  __wdPath.dirname(process.execPath), '..', 'Resources', 'webdeck-core-runtime'
+)
 const __wdRuntime =
   process.env.WEBDECK_CORE_RUNTIME ||
-  __wdPath.join(__wdPath.dirname(process.execPath), 'webdeck-core-runtime')
+  (__wdFs.existsSync(__wdBeside) ? __wdBeside : __wdFs.existsSync(__wdInBundle) ? __wdInBundle : __wdBeside)
 process.env.WEBDECK_CORE_RUNTIME = __wdRuntime
 require = createRequire(__wdPath.join(__wdRuntime, 'noop.cjs'))
 

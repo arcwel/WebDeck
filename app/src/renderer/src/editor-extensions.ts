@@ -1,4 +1,5 @@
 import { ExtensionHostKind, registerExtension } from '@codingame/monaco-vscode-api/extensions'
+import { getService, IExtensionService } from '@codingame/monaco-vscode-api/services'
 import type { IExtensionManifest } from '@codingame/monaco-vscode-api/extensions'
 import {
   localizeManifest,
@@ -228,4 +229,43 @@ export async function loadInstalledExtensions(): Promise<number> {
     }
   }
   return loaded
+}
+
+/** What the extension host reports for one extension: did its code run, and how it went. */
+export interface ExtensionActivation {
+  /** The host has started (or finished) activating it. */
+  started: boolean
+  /** Time to activate, once known. */
+  activateMs?: number
+  /** Errors thrown while activating or running. */
+  errors: string[]
+  /** The host's own notes — a missing dependency, an unsupported API. */
+  messages: string[]
+}
+
+/**
+ * Activation status by extension id (lowercased), from VS Code's extension
+ * service. A declarative extension never starts and that is fine; a code
+ * extension that never starts, or starts with an error, is what this shows.
+ */
+export async function extensionActivations(): Promise<Record<string, ExtensionActivation>> {
+  const out: Record<string, ExtensionActivation> = {}
+  try {
+    const service = await getService(IExtensionService)
+    const all = service.getExtensionsStatus()
+    for (const [id, status] of Object.entries(all)) {
+      const times = status.activationTimes
+      out[id.toLowerCase()] = {
+        started: status.activationStarted,
+        activateMs: times
+          ? times.codeLoadingTime + times.activateCallTime + times.activateResolvedTime
+          : undefined,
+        errors: status.runtimeErrors.map((e) => e.message),
+        messages: status.messages.filter((m) => m.type <= 1).map((m) => m.message)
+      }
+    }
+  } catch {
+    // Before the services boot there is nothing to report.
+  }
+  return out
 }

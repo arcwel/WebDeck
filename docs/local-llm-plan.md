@@ -265,19 +265,27 @@ kinds, bounded titles, no untitled steps) before it is shown for approval.
   local in one run. Each is a plan of its own once the seam exists.
 - Telemetry of any kind about which models are used.
 
-## CLI opportunities
+## The CLI
 
-Every action here should be one command as well as a click, for the agent
-and for scripts:
+Every action here is one command as well as a click, for the agent and for
+scripts — `webdeck-core models …` (`app/src/core/cli-models.ts`), against the
+same data directory the app uses (`--user-data DIR`, else `~/.webdeck`):
 
-1. `webdeck-core models list --json` — runtimes found, models, capabilities,
-   which is in force for Agent and Ask.
-2. `webdeck-core models use ollama/qwen3.5:9b --for agent` — the same choice
-   the picker makes.
-3. `webdeck-core models pull qwen3.5:9b --json` — Ollama pulls with progress
-   lines.
-4. `webdeck-core models test <id>` — one prompt, time-to-first-token and
-   tokens per second, exit code 0 when it answered.
+```bash
+webdeck-core models list [--json]                # runtimes, models, what is in force
+webdeck-core models use ollama/qwen3.5:9b --for agent
+webdeck-core models use --clear --for ask         # back to the cloud choice
+webdeck-core models pull qwen3.5:4b [--json]      # one progress line per update
+webdeck-core models remove qwen3.5:4b
+webdeck-core models test apple/on-device [--json] # first token, tokens/s
+webdeck-core models recommend
+webdeck-core models endpoint add team http://llm.internal:8000 --key-stdin
+webdeck-core models endpoint remove team
+```
+
+Exit codes: 0 done, 1 refused or failed with the reason on stderr (in the
+JSON object with `--json`), 2 usage. The binary lives in the app bundle at
+`Contents/MacOS/webdeck-core`.
 
 ## Open for review
 

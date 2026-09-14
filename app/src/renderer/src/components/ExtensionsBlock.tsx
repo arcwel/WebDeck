@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { VsxExtension, VsxInstalled } from '@shared/ipc'
-import { isRegistered, registerInstalled, unregisterInstalled } from '@/editor-extensions'
+import {
+  extensionActivations,
+  isRegistered,
+  onEditorExtensionsChanged,
+  registerInstalled,
+  unregisterInstalled,
+  type ExtensionActivation
+} from '@/editor-extensions'
 
 /**
  * Editor extensions from Open VSX (task 12.8): search the registry, install
@@ -25,10 +32,43 @@ function isWebCapable(ext: VsxInstalled): boolean {
   return Boolean(manifest.browser) || !manifest.main
 }
 
+/** One phrase for what the host did with a code extension. */
+function activationLabel(ext: VsxInstalled, a: ExtensionActivation | undefined): string {
+  const manifest = ext.manifest as { browser?: unknown }
+  if (!manifest.browser) return 'declarative — nothing to run'
+  if (!a) return 'host status pending'
+  if (a.errors.length) return 'activation failed'
+  if (a.activateMs !== undefined) return `activated in ${Math.round(a.activateMs)} ms`
+  if (a.started) return 'activating…'
+  return 'not activated yet (waits for its activation event)'
+}
+
 export function ExtensionsBlock(): React.JSX.Element {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<VsxExtension[]>([])
   const [installed, setInstalled] = useState<VsxInstalled[]>([])
+  const [activation, setActivation] = useState<Record<string, ExtensionActivation>>({})
+  // What the host says about each extension, refreshed as extensions change
+  // and again a few seconds later, when a slow activation has had time to land.
+  useEffect(() => {
+    let live = true
+    const refresh = (): void => {
+      void extensionActivations().then((a) => {
+        if (live) setActivation(a)
+      })
+    }
+    refresh()
+    const later = setTimeout(refresh, 4000)
+    const off = onEditorExtensionsChanged(() => {
+      refresh()
+      setTimeout(refresh, 4000)
+    })
+    return () => {
+      live = false
+      clearTimeout(later)
+      off()
+    }
+  }, [installed])
   const [busy, setBusy] = useState<Busy>(null)
   const [searching, setSearching] = useState(false)
   const [status, setStatus] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
@@ -231,8 +271,19 @@ export function ExtensionsBlock(): React.JSX.Element {
                         {ext.id} · v{ext.version}
                         {isRegistered(ext.id) ? '' : ' · not loaded'}
                         {isWebCapable(ext) ? '' : ' · desktop-only: its code cannot run here'}
+                        {isWebCapable(ext) && (
+                          <span data-testid={`ext-activation-${ext.id}`}>
+                            {' · '}
+                            {activationLabel(ext, activation[ext.id.toLowerCase()])}
+                          </span>
+                        )}
                       </span>
                     </div>
+                    {activation[ext.id.toLowerCase()]?.errors.length ? (
+                      <div className="truncate text-rose-600 dark:text-rose-400">
+                        {activation[ext.id.toLowerCase()].errors[0]}
+                      </div>
+                    ) : null}
                     <div className="truncate text-slate-600 dark:text-slate-300">
                       {ext.description}
                     </div>

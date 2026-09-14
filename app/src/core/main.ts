@@ -13,6 +13,7 @@ import { startWebdeckCore } from './server'
  *
  * Usage:
  *   webdeck-core [--port N] [--host H] [--user-data DIR] [--port-file PATH]
+ *   webdeck-core models <list|use|pull|remove|test|recommend|endpoint> … (cli-models.ts)
  *
  * The port defaults to 0 (the OS picks a free one) and is printed on stdout as
  * JSON, so a supervising process knows the core came up.
@@ -79,7 +80,11 @@ function runtimeDir(): string | undefined {
   const named = process.env.WEBDECK_CORE_RUNTIME
   if (named) return named
   const beside = join(dirname(process.execPath), 'webdeck-core-runtime')
-  return existsSync(beside) ? beside : undefined
+  if (existsSync(beside)) return beside
+  // The app bundle keeps it under Contents/Resources (codesign rejects a
+  // directory under Contents/MacOS); the SEA prologue looks there too.
+  const inBundle = join(dirname(process.execPath), '..', 'Resources', 'webdeck-core-runtime')
+  return existsSync(inBundle) ? inBundle : undefined
 }
 
 /**
@@ -100,6 +105,11 @@ function agentBrowserMode(): 'session' | 'isolated' {
 }
 
 async function main(): Promise<void> {
+  // Subcommands do one thing and exit; only the bare invocation serves.
+  if (process.argv[2] === 'models') {
+    const { runModelsCli } = await import('./cli-models')
+    process.exit(await runModelsCli(process.argv.slice(3)))
+  }
   const portArg = arg('port')
   const userDataDir = arg('user-data')
   const appDir = runtimeDir()
