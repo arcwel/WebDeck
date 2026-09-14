@@ -4,6 +4,7 @@
 
 #include "chrome/browser/ui/webui/webdeck/webdeck_adblock.h"
 
+#include <algorithm>
 #include <utility>
 
 #include <vector>
@@ -69,6 +70,7 @@
 #include "content/public/browser/render_widget_host_view.h"
 #include "third_party/skia/include/core/SkBitmap.h"
 #include "ui/gfx/codec/jpeg_codec.h"
+#include "ui/gfx/geometry/size_conversions.h"
 #include "chrome/common/chrome_isolated_world_ids.h"
 #include "chrome/common/pref_names.h"
 #include "chrome/common/webui_url_constants.h"
@@ -1443,8 +1445,23 @@ void WebDeckShell::CaptureStage(int32_t tab_id,
     std::move(callback).Run(std::string());
     return;
   }
+  // The still is shown at the view's own size, so native pixels are what it
+  // needs — up to a point. On a 5K or 6K display a 2x view is 5000+ pixels
+  // wide, and that bitmap costs a tenth of a second to encode and tens of
+  // megabytes as a data: URL. Past kMaxStillEdge the copy is asked for a
+  // scaled bitmap instead; the GPU scales it, and the shell stretches it back
+  // over the frame, where the loss is invisible under a menu.
+  constexpr int kMaxStillEdge = 2560;
+  gfx::Size output_size;
+  const gfx::Size pixels = gfx::ScaleToCeiledSize(
+      view->GetViewBounds().size(), view->GetDeviceScaleFactor());
+  const int longest = std::max(pixels.width(), pixels.height());
+  if (longest > kMaxStillEdge) {
+    output_size = gfx::ScaleToFlooredSize(
+        pixels, static_cast<float>(kMaxStillEdge) / longest);
+  }
   view->CopyFromSurface(
-      /*src_rect=*/gfx::Rect(), /*output_size=*/gfx::Size(),
+      /*src_rect=*/gfx::Rect(), output_size,
       base::TimeDelta(),
       base::BindPostTask(
           base::SequencedTaskRunner::GetCurrentDefault(),

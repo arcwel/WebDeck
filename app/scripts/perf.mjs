@@ -60,12 +60,15 @@ Options
   --max-rss-mb <N>      fail (exit 1) if the settled process-tree memory exceeds this
                         (physical footprint on macOS, RSS elsewhere)
   --max-tab-mb <N>      fail (exit 1) if the per-tab renderer memory exceeds this
+  --rss                 report RSS instead of physical footprint (also the fallback
+                        when footprint hangs, as it does where process inspection is blocked)
   --json                machine-readable result on stdout
   --keep-open           leave the browser running afterwards
   --help, -h            this text
 
 Exit: 0 measured (and within any thresholds) · 1 a threshold was exceeded · 2 could not measure`
 
+const args = process.argv.slice(2)
 function arg(name, fallback = undefined) {
   const i = process.argv.indexOf(`--${name}`)
   return i !== -1 && process.argv[i + 1] ? process.argv[i + 1] : fallback
@@ -132,17 +135,40 @@ function classify(command) {
  * physical footprint is what the OS actually charges the process — the number
  * that matters for "memory with multiple tabs". Falls back to RSS elsewhere.
  */
+// `footprint` needs the same process-inspection right a debugger does. On a
+// machine where that is blocked it does not fail, it hangs — so each call is
+// bounded, and after the first one that does not answer the run falls back to
+// RSS for every process and says so, rather than sitting forever.
+const FOOTPRINT_TIMEOUT_MS = 3000
+let footprintUnavailable = process.platform !== 'darwin' || args.includes('--rss')
+
 function physFootprintMb(pid) {
-  if (process.platform !== 'darwin') return null
+  if (footprintUnavailable) return null
   try {
-    const out = execFileSync('footprint', ['-p', String(pid)], { encoding: 'utf8', stdio: 'pipe' })
+    const out = execFileSync('footprint', ['-p', String(pid)], {
+      encoding: 'utf8',
+      stdio: 'pipe',
+      timeout: FOOTPRINT_TIMEOUT_MS,
+      killSignal: 'SIGKILL'
+    })
     const m = out.match(/phys_footprint:\s*([\d.]+)\s*(KB|MB|GB)/i)
     if (!m) return null
     const n = Number(m[1])
     return m[2].toUpperCase() === 'GB' ? n * 1024 : m[2].toUpperCase() === 'KB' ? n / 1024 : n
-  } catch {
+  } catch (error) {
+    if (error && (error.killed || error.signal === 'SIGKILL')) {
+      footprintUnavailable = true
+      process.stderr.write(
+        `perf: footprint did not answer in ${FOOTPRINT_TIMEOUT_MS} ms (process inspection is blocked on this machine); reporting RSS instead, which double-counts shared pages\n`
+      )
+    }
     return null
   }
+}
+
+/** Whether the memory numbers are physical footprint (true) or RSS (false). */
+export function memoryIsFootprint() {
+  return !footprintUnavailable
 }
 
 /** Attach the footprint to a tree; `memMb` is the headline (footprint, else RSS). */
@@ -261,6 +287,7 @@ async function measureBrowser({ browser, tabs, agents, settleMs, keepOpen }) {
 
     await sleep(settleMs)
     result.memory.settled = summarize(enrich(processTree(child.pid)))
+    result.memory.basis = memoryIsFootprint() ? 'footprint' : 'rss'
 
     // Tabs: each is a fresh renderer, so the delta is the honest per-tab cost.
     if (tabs > 0) {

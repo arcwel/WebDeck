@@ -3,6 +3,25 @@
 All notable changes to Arcwel WebDeck are recorded here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Fixed
+
+- **The page still is bounded on very large displays.** The still shown
+  behind a menu was captured at the view's native pixels, which on a 5K or
+  6K display is a bitmap wide enough to take a tenth of a second to encode.
+  Past 2,560 pixels on the longer edge the copy is scaled by the GPU; under
+  a menu the difference is invisible.
+- **The performance harness no longer hangs where process inspection is
+  blocked.** Each `footprint` call is bounded and the run falls back to RSS
+  with a note (`--rss` forces it); the JSON carries `memory.basis`.
+
+### Documentation
+
+- `sync/README.md` says where the sync service keeps its SQLite files and
+  how to reset them.
+- `docs/performance.md` records a v0.1.6 re-run.
+
 ## v0.1.6 — 2026-09-14
 
 ### Added (local models, phases 2–4)

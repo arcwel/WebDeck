@@ -69,6 +69,33 @@ exceeded (use it as a regression gate) · `2` could not measure.
    (Monaco/VS Code service layer) in a WebUI; its unique memory is a fraction
    of its ~515 MB RSS.
 
+## Re-run — 2026-09-14, v0.1.6, same machine (RSS basis)
+
+`footprint` did not answer on this machine that day — process inspection was
+blocked at the OS level (the same block stopped every lldb-based debugger from
+launching a program) — so the harness fell back to RSS, which double-counts the
+shared framework pages. These numbers are therefore not comparable to the
+footprint baseline above; the startup and per-process-type _deltas_ are.
+
+| Metric                         | Value                                                                                   |
+| ------------------------------ | --------------------------------------------------------------------------------------- |
+| Startup → CDP / shell / core   | 424 / 426 / 632 ms (one cold run)                                                       |
+| Settled RSS, 13 processes      | 1,935 MB (renderers 1,205 · browser 236 · GPU 190 · core 140 · network 92 · storage 72) |
+| Per tab, own renderer (RSS)    | ≈ 103 MB — the shared-page artefact the baseline explains; ~30 MB unique                |
+| Browser-process growth per tab | ≈ 2.8 MB RSS                                                                            |
+| 3 mock agents → core delta     | +0.2 MB (0.1 per agent)                                                                 |
+| Standalone core, ready / RSS   | 1,342 ms (cold, first launch after install) / 62 MB                                     |
+
+Reading: nothing in WebDeck's own processes grows per tab beyond noise (browser
++2.8 MB, core +0.1 MB), and agents stay free. The shell renderer's share is
+inside the 1,205 MB renderer figure with five page renderers; a footprint
+re-run on a machine where `footprint` answers is the number to compare with
+the baseline.
+
+The harness now bounds each `footprint` call (3 s) and falls back to RSS with a
+note (`--rss` forces it), so a blocked machine produces a report instead of a
+hang; the JSON carries `memory.basis`.
+
 ## Follow-ups (not blockers)
 
 - Profile the GPU process's compositing layers under the glass theme (4).

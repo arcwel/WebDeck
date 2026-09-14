@@ -25,6 +25,15 @@ This package is the sync half.
   entities by datatype and opaque specifics rather than understanding any of
   them. Bookmarks are what has been exercised end to end.
 
+## Where the data lives
+
+`webdeck-sync serve` keeps one SQLite file per service at the path `--data`
+names, `./webdeck-sync.db` by default, with SQLite's `-wal` and `-shm`
+companions beside it. All three are ignored by `sync/.gitignore`; deleting
+them resets the service (every browser then re-syncs from an empty store,
+which Chromium handles as a new store birthday). `--data :memory:` keeps
+nothing between runs, which the tests use.
+
 ## What does not work yet
 
 - **The sign-in flow.** The identity endpoints answer correctly — token
