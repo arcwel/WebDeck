@@ -5,6 +5,8 @@ All notable changes to Arcwel WebDeck are recorded here. This project adheres to
 
 ## Unreleased
 
+## v0.1.4 — 2026-09-14
+
 ### Fixed (macOS privacy strings)
 
 - **The app no longer dies the first time a page touches Bluetooth, the
