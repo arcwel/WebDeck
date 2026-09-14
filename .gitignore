@@ -7,6 +7,10 @@ app/smoke*.png
 app/resources/js-debug/
 # Native LSP binaries vendored by app/scripts/fetch-lsp-bins.mjs (roadmap C1).
 app/resources/lsp-bin/
+# Apple on-device model helper, built by app/scripts/build-apple-llm.mjs.
+app/resources/apple-llm/
+# Debug adapters vendored by app/scripts/fetch-dap-bins.mjs (Delve, codelldb).
+app/resources/dap-bin/
 .DS_Store
 
 # Release update-channel private signing key — NEVER commit (10.2)

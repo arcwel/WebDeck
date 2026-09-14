@@ -1,7 +1,8 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
-import { connect, type Socket } from 'node:net'
-import { existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { connect, createServer, type Socket } from 'node:net'
+import { existsSync, readdirSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { delimiter, join } from 'node:path'
 import { coreEnv } from '../env'
 import { StreamMessageReader, StreamMessageWriter } from 'vscode-jsonrpc/node'
 import type { Message } from 'vscode-jsonrpc'
@@ -35,19 +36,26 @@ import { asString } from '../coerce'
  * Transport: main owns the process and the sockets and forwards decoded
  * messages to the renderer over IPC, the same shape as the language client in
  * task 12.2. The renderer never sees a socket or a Content-Length header.
+ *
+ * **Other languages.** The same module starts debugpy (Python), Delve (Go) and
+ * lldb — codelldb or Xcode's lldb-dap — for Rust, C and C++, each found on the
+ * machine or vendored under resources/dap-bin. Delve and codelldb print a port
+ * and are reached over a socket like js-debug; debugpy and lldb-dap speak DAP
+ * on their own stdio, so their one connection is the child's pipes.
  */
 
 interface Connection {
-  socket: Socket
   reader: StreamMessageReader
   writer: StreamMessageWriter
+  close: () => void
 }
 
 let adapter: ChildProcess | null = null
 let adapterPort = 0
+let adapterTransport: Transport = 'socket'
 const connections = new Map<string, Connection>()
 
-/** Where the vendored adapter lives: the core runtime dir, or the dev checkout. */
+/** Where the vendored js-debug lives: the core runtime dir, or the dev checkout. */
 function adapterPath(): string | null {
   const candidates = [
     join(coreEnv().appDir, 'resources', 'js-debug', 'src', 'dapDebugServer.js'),
@@ -56,63 +64,101 @@ function adapterPath(): string | null {
   return candidates.find((path) => path && existsSync(path)) ?? null
 }
 
-export function isDebuggerAvailable(): boolean {
-  return adapterPath() !== null
+/** A native adapter under resources/dap-bin/<rel>, in the runtime or the dev checkout. */
+function vendoredPath(rel: string): string | null {
+  let appResources = ''
+  try {
+    appResources = join(coreEnv().appDir, 'resources', 'dap-bin', rel)
+  } catch {
+    // Before setCoreEnv(): only the dev candidate applies.
+  }
+  const candidates = [appResources, join(process.cwd(), 'resources', 'dap-bin', rel)]
+  return candidates.find((path) => path && existsSync(path)) ?? null
+}
+
+function onPath(binary: string): string | null {
+  for (const dir of (process.env.PATH ?? '').split(delimiter)) {
+    if (dir && existsSync(join(dir, binary))) return join(dir, binary)
+  }
+  return null
+}
+
+const PLATFORM_DIR = `${process.platform}-${process.arch}`
+
+/** Delve: vendored, on PATH, or where `go install` puts it. */
+export function findDelve(): string | null {
+  return (
+    vendoredPath(join('delve', PLATFORM_DIR, 'dlv')) ??
+    onPath('dlv') ??
+    [join(homedir(), 'go', 'bin', 'dlv')].find((p) => existsSync(p)) ??
+    null
+  )
+}
+
+/** codelldb: vendored, or the newest copy VS Code's extension installed. */
+export function findCodelldb(): string | null {
+  const vendored = vendoredPath(join('codelldb', PLATFORM_DIR, 'adapter', 'codelldb'))
+  if (vendored) return vendored
+  const extensions = join(homedir(), '.vscode', 'extensions')
+  if (!existsSync(extensions)) return null
+  const candidates = readdirSync(extensions)
+    .filter((name) => name.startsWith('vadimcn.vscode-lldb-'))
+    .sort()
+    .reverse()
+    .map((name) => join(extensions, name, 'adapter', 'codelldb'))
+  return candidates.find((p) => existsSync(p)) ?? null
+}
+
+/** lldb-dap: Xcode ships it on macOS; LLVM installs put it on PATH. */
+export function findLldbDap(): string | null {
+  const fromPath = onPath('lldb-dap')
+  if (fromPath) return fromPath
+  if (process.platform !== 'darwin') return null
+  const found = spawnSync('xcrun', ['--find', 'lldb-dap'], { encoding: 'utf8' })
+  const path = found.status === 0 ? found.stdout.trim() : ''
+  return path && existsSync(path) ? path : null
+}
+
+export function isDebuggerAvailable(language = 'node'): boolean {
+  return !('error' in resolveDebugAdapter(language))
 }
 
 /**
  * Debug adapters by language id.
  *
- * Only `node` (Microsoft js-debug, covering pwa-node / pwa-chrome / pwa-msedge)
- * is fully wired into the socket transport below: it is vendored, Node-based,
- * and rides the `ELECTRON_RUN_AS_NODE` path that lets a spawned script run
- * inside the SEA, so it is shippable today. The other entries are launch recipes
- * for adapters whose toolchain we do not bundle. `resolveDebugAdapter` reports
- * how — and whether — each one can start on this machine, so the remaining
- * transport work does not have to re-derive the spawn command. Adding a language
- * is one entry here plus its transport wiring.
+ * `node` is Microsoft js-debug (pwa-node / pwa-chrome / pwa-msedge), vendored
+ * and Node-based, riding `ELECTRON_RUN_AS_NODE` so a script runs inside the
+ * SEA. `python` is debugpy on the user's own interpreter. `go` is Delve, and
+ * `rust` and `c` are lldb — codelldb when vendored (`npm run fetch:dap`) or
+ * installed with VS Code, else Xcode's lldb-dap. Each entry says how the
+ * adapter is reached and how it speaks: over a socket whose port it prints,
+ * or over its own stdio. Adding a language is one entry here plus its launch
+ * shape in the renderer.
  */
-type AdapterKind = 'bundled-node' | 'system-python' | 'todo'
+type Transport = 'socket' | 'stdio'
 
-interface DebugAdapterSpec {
-  kind: AdapterKind
-  /** DAP transport the adapter speaks (js-debug opens a TCP socket; debugpy
-   *  speaks DAP over the adapter process's own stdio). */
-  transport: 'socket' | 'stdio'
-  /** Human-readable summary for logs and docs. */
-  note: string
+export interface ResolvedAdapter {
+  command: string
+  args: string[]
+  transport: Transport
+  /** What the client sends as `adapterID`, and how the renderer shapes the launch. */
+  adapterId: 'pwa-node' | 'debugpy' | 'go' | 'lldb' | 'lldb-dap'
+  /** For a socket adapter that announces its port: the line it prints, with the port captured. */
+  portPattern?: RegExp
+  /** For a socket adapter that must be told its port: the flags that carry one we picked. */
+  assignPort?: (port: number) => string[]
+  env?: Record<string, string>
 }
 
-const ADAPTERS: Record<string, DebugAdapterSpec> = {
-  node: {
-    kind: 'bundled-node',
-    transport: 'socket',
-    note: 'Microsoft js-debug (pwa-node / pwa-chrome / pwa-msedge), vendored and Node-based.'
-  },
-  // Python via debugpy. debugpy is a *Python* program, not a Node one, so it
-  // cannot ride the ELECTRON_RUN_AS_NODE path the other adapters use and is not
-  // bundled — it launches against the user's own interpreter as
-  // `python3 -m debugpy.adapter` (stdio DAP) and requires `pip install debugpy`.
-  python: {
-    kind: 'system-python',
-    transport: 'stdio',
-    note: 'debugpy.adapter via system python3 (interpreter dependency, not bundled).'
-  },
-  // TODO(go): Delve. Large native binary — do NOT bundle here; vendor per
-  // docs/LANGUAGE_SUPPORT.md, then wire the stdio transport.
-  go: {
-    kind: 'todo',
-    transport: 'stdio',
-    note: 'TODO: vendor Delve (`dlv dap`) — see docs/LANGUAGE_SUPPORT.md.'
-  },
-  // TODO(rust): codelldb. Large native binary — do NOT bundle here; vendor per
-  // docs/LANGUAGE_SUPPORT.md, then wire the stdio transport.
-  rust: {
-    kind: 'todo',
-    transport: 'stdio',
-    note: 'TODO: vendor codelldb (`codelldb --port`) — see docs/LANGUAGE_SUPPORT.md.'
-  }
+const ADAPTER_NOTES: Record<string, string> = {
+  node: 'Microsoft js-debug (pwa-node / pwa-chrome / pwa-msedge), vendored and Node-based.',
+  python: 'debugpy.adapter via system python3 (interpreter dependency, not bundled).',
+  go: 'Delve (`dlv dap`): vendored by fetch-dap-bins.mjs on a machine with Go, or on PATH.',
+  rust: 'codelldb (vendored or from VS Code), else Xcode’s lldb-dap.',
+  c: 'codelldb (vendored or from VS Code), else Xcode’s lldb-dap.'
 }
+
+export const DEBUG_LANGUAGES = Object.keys(ADAPTER_NOTES)
 
 /** Locate a system Python 3 interpreter, or null. Unlike the Node adapters,
  *  debugpy needs a real interpreter on the host; probe the usual names rather
@@ -130,26 +176,27 @@ function findPython(): string | null {
  * cannot on this machine.
  *
  * Non-throwing, mirroring the language-server resolver: a missing toolchain must
- * degrade to "no debugging for this language", never crash the service. Today
- * only the `node` (js-debug) recipe is consumed by startDebugSession; the Python
- * recipe is returned guarded (debugpy present on a discoverable python3) and the
- * go/rust entries report as not-yet-available.
+ * degrade to "no debugging for this language", never crash the service.
  */
-export function resolveDebugAdapter(
-  id: string
-): { command: string; args: string[]; transport: 'socket' | 'stdio' } | { error: string } {
-  const spec = ADAPTERS[id]
-  if (!spec) return { error: `No debug adapter configured for '${id}'.` }
+export function resolveDebugAdapter(id: string): ResolvedAdapter | { error: string } {
+  if (!(id in ADAPTER_NOTES)) return { error: `No debug adapter configured for '${id}'.` }
 
-  if (spec.kind === 'bundled-node') {
+  if (id === 'node') {
     const path = adapterPath()
     if (!path)
       return { error: 'The debug adapter is not installed. Run scripts/fetch-js-debug.mjs.' }
     // Same argv js-debug's own start path uses: port 0 = pick a free port.
-    return { command: process.execPath, args: [path, '0', '127.0.0.1'], transport: 'socket' }
+    return {
+      command: process.execPath,
+      args: [path, '0', '127.0.0.1'],
+      transport: 'socket',
+      adapterId: 'pwa-node',
+      portPattern: /listening at [^:]+:(\d+)/i,
+      env: { ELECTRON_RUN_AS_NODE: '1' }
+    }
   }
 
-  if (spec.kind === 'system-python') {
+  if (id === 'python') {
     const python = findPython()
     if (!python) {
       return {
@@ -158,21 +205,107 @@ export function resolveDebugAdapter(
           '(`pip install debugpy`); no python3 was found on PATH.'
       }
     }
-    return { command: python, args: ['-m', 'debugpy.adapter'], transport: 'stdio' }
+    return {
+      command: python,
+      args: ['-m', 'debugpy.adapter'],
+      transport: 'stdio',
+      adapterId: 'debugpy'
+    }
   }
 
-  return { error: `Debugging for '${id}' is not vendored yet. See docs/LANGUAGE_SUPPORT.md.` }
+  if (id === 'go') {
+    const dlv = findDelve()
+    if (!dlv) {
+      return {
+        error:
+          'Go debugging needs Delve. Install it with ' +
+          '`go install github.com/go-delve/delve/cmd/dlv@latest`, or run `npm run fetch:dap` ' +
+          'on a machine with Go.'
+      }
+    }
+    return {
+      command: dlv,
+      args: ['dap', '--listen=127.0.0.1:0'],
+      transport: 'socket',
+      adapterId: 'go',
+      portPattern: /listening at: [^:]+:(\d+)/i
+    }
+  }
+
+  // rust, c
+  const codelldb = findCodelldb()
+  if (codelldb) {
+    // codelldb listens on the port it is given and prints nothing, so the
+    // core picks a free port and connects once the adapter accepts.
+    return {
+      command: codelldb,
+      args: [],
+      transport: 'socket',
+      adapterId: 'lldb',
+      assignPort: (port) => ['--port', String(port)]
+    }
+  }
+  const lldbDap = findLldbDap()
+  if (lldbDap) return { command: lldbDap, args: [], transport: 'stdio', adapterId: 'lldb-dap' }
+  return {
+    error:
+      `${id === 'rust' ? 'Rust' : 'C and C++'} debugging needs an lldb adapter: ` +
+      'Xcode’s lldb-dap (install Xcode), codelldb from VS Code’s CodeLLDB extension, or ' +
+      '`npm run fetch:dap`.'
+  }
+}
+
+/** A port nobody holds right now: bind to 0, read what the OS gave, release it. */
+function freePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = createServer()
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address()
+      const port = typeof address === 'object' && address ? address.port : 0
+      server.close(() => (port ? resolve(port) : reject(new Error('no free port'))))
+    })
+  })
+}
+
+/**
+ * Connect to the adapter's assigned port, retrying until it accepts. The
+ * socket is the session: codelldb without --multi-session serves the first
+ * connection and no other, so a probe that connects and hangs up would take
+ * the only seat.
+ */
+function connectWhenReady(child: ChildProcess, port: number, timeoutMs: number): Promise<Socket> {
+  return new Promise((resolve, reject) => {
+    const deadline = Date.now() + timeoutMs
+    let exited = false
+    child.once('exit', () => {
+      exited = true
+    })
+    const attempt = (): void => {
+      if (exited) {
+        reject(new Error('the debug adapter exited before it was ready'))
+        return
+      }
+      const socket = connect(port, '127.0.0.1')
+      socket.once('connect', () => resolve(socket))
+      socket.once('error', () => {
+        socket.destroy()
+        if (Date.now() > deadline) reject(new Error('the debug adapter did not start'))
+        else setTimeout(attempt, 250)
+      })
+    }
+    attempt()
+  })
 }
 
 /** Wait for the adapter to print its listening banner, then read the port. */
-function waitForPort(child: ChildProcess, timeoutMs: number): Promise<number> {
+function waitForPort(child: ChildProcess, pattern: RegExp, timeoutMs: number): Promise<number> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('the debug adapter did not start')), timeoutMs)
     let buffered = ''
     const onData = (chunk: Buffer): void => {
       buffered += chunk.toString()
-      // "Debug server listening at 127.0.0.1:58321"
-      const match = /listening at [^:]+:(\d+)/i.exec(buffered)
+      const match = pattern.exec(buffered)
       if (!match) return
       clearTimeout(timer)
       child.stdout?.off('data', onData)
@@ -186,19 +319,46 @@ function waitForPort(child: ChildProcess, timeoutMs: number): Promise<number> {
   })
 }
 
-/** Open one DAP connection to the running adapter under the given id. */
-function openConnection(id: string): Connection {
-  const socket = connect(adapterPort, '127.0.0.1')
-  const reader = new StreamMessageReader(socket)
-  const writer = new StreamMessageWriter(socket)
-
+function listen(id: string, reader: StreamMessageReader): void {
   reader.listen((message: Message) =>
     coreBroadcast(IpcEvents.debugMessage, { sessionId: id, message }, null)
   )
   reader.onError(() => closeConnection(id))
-  socket.on('error', () => closeConnection(id))
+}
 
-  const connection: Connection = { socket, reader, writer }
+/** Open one DAP connection to the running socket adapter under the given id. */
+function openSocketConnection(id: string, existing?: Socket): Connection {
+  const socket = existing ?? connect(adapterPort, '127.0.0.1')
+  const reader = new StreamMessageReader(socket)
+  const writer = new StreamMessageWriter(socket)
+  listen(id, reader)
+  socket.on('error', () => closeConnection(id))
+  const connection: Connection = {
+    reader,
+    writer,
+    close: () => {
+      reader.dispose()
+      writer.dispose()
+      socket.destroy()
+    }
+  }
+  connections.set(id, connection)
+  return connection
+}
+
+/** The one connection a stdio adapter has: its own stdout and stdin. */
+function openStdioConnection(id: string, child: ChildProcess): Connection {
+  const reader = new StreamMessageReader(child.stdout!)
+  const writer = new StreamMessageWriter(child.stdin!)
+  listen(id, reader)
+  const connection: Connection = {
+    reader,
+    writer,
+    close: () => {
+      reader.dispose()
+      writer.dispose()
+    }
+  }
   connections.set(id, connection)
   return connection
 }
@@ -207,67 +367,87 @@ function closeConnection(id: string): void {
   const connection = connections.get(id)
   if (!connection) return
   connections.delete(id)
-  connection.reader.dispose()
-  connection.writer.dispose()
-  connection.socket.destroy()
+  connection.close()
 }
 
 /**
- * Start the adapter and open the root connection.
+ * Start the adapter for a language and open the root connection.
  *
  * One adapter process at a time: a second Start replaces the first rather than
  * leaving an orphan holding a port and a debuggee.
  */
-export async function startDebugSession(): Promise<{ error?: string }> {
+export async function startDebugSession(
+  language = 'node'
+): Promise<{ error?: string; adapterId?: ResolvedAdapter['adapterId'] }> {
   stopDebugSession()
 
-  const path = adapterPath()
-  if (!path) {
-    return { error: 'The debug adapter is not installed. Run scripts/fetch-js-debug.mjs.' }
-  }
+  const resolved = resolveDebugAdapter(language)
+  if ('error' in resolved) return { error: resolved.error }
   const cwd = getCurrentWorkspace()?.path
   if (!cwd) return { error: 'No workspace open.' }
 
-  // Port 0 lets the adapter pick a free port and tell us which.
-  const child = spawn(process.execPath, [path, '0', '127.0.0.1'], {
+  let assigned = 0
+  if (resolved.assignPort) {
+    try {
+      assigned = await freePort()
+    } catch (error) {
+      return { error: String(error instanceof Error ? error.message : error) }
+    }
+  }
+  const args = assigned ? [...resolved.args, ...resolved.assignPort!(assigned)] : resolved.args
+  const child = spawn(resolved.command, args, {
     cwd,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }
+    stdio: ['pipe', 'pipe', 'pipe'],
+    env: { ...process.env, ...(resolved.env ?? {}) }
   })
 
   child.stderr?.on('data', (chunk: Buffer) => {
     const text = chunk.toString().trim()
-    if (text) console.error(`[dap] ${text}`)
+    if (text) console.error(`[dap ${resolved.adapterId}] ${text}`)
   })
+  child.on('error', (error) => console.error(`[dap ${resolved.adapterId}] ${error.message}`))
 
-  try {
-    adapterPort = await waitForPort(child, 20000)
-  } catch (error) {
-    child.kill()
-    return { error: String(error instanceof Error ? error.message : error) }
+  adapterTransport = resolved.transport
+  let rootSocket: Socket | undefined
+  if (resolved.transport === 'socket') {
+    try {
+      if (assigned) {
+        rootSocket = await connectWhenReady(child, assigned, 20000)
+        adapterPort = assigned
+      } else {
+        adapterPort = await waitForPort(child, resolved.portPattern!, 20000)
+      }
+    } catch (error) {
+      child.kill()
+      return { error: String(error instanceof Error ? error.message : error) }
+    }
   }
 
   child.on('exit', () => {
+    if (adapter !== child) return
     adapter = null
     for (const id of [...connections.keys()]) closeConnection(id)
     coreBroadcast(IpcEvents.debugExit, null, null)
   })
 
   adapter = child
-  openConnection('root')
-  return {}
+  if (resolved.transport === 'socket') openSocketConnection('root', rootSocket)
+  else openStdioConnection('root', child)
+  return { adapterId: resolved.adapterId }
 }
 
 /**
  * Open a child session (the `startDebugging` reverse request).
  *
  * The child connects to the same adapter; js-debug matches it to the pending
- * target carried in the configuration the renderer echoes back.
+ * target carried in the configuration the renderer echoes back. An adapter on
+ * stdio has one session and no way to open another.
  */
 export function attachDebugChild(id: string): { error?: string } {
   if (!adapter) return { error: 'No debug session is running.' }
   if (connections.has(id)) return {}
-  openConnection(id)
+  if (adapterTransport !== 'socket') return { error: 'This debug adapter runs one session.' }
+  openSocketConnection(id)
   return {}
 }
 
@@ -288,11 +468,26 @@ export function stopDebugSession(): void {
   child?.kill()
 }
 
-/** Register the debugger domain with webdeck-core (P1). `debugSend` stays a
- *  streaming ipcMain.on channel until the transport gains a notify path. */
+/** What the renderer may know about an adapter: its id and transport, or why it is absent. */
+export function describeDebugAdapter(
+  language: string
+): { adapterId: ResolvedAdapter['adapterId']; transport: Transport } | { error: string } {
+  const resolved = resolveDebugAdapter(language)
+  return 'error' in resolved
+    ? resolved
+    : { adapterId: resolved.adapterId, transport: resolved.transport }
+}
+
 export function registerDebugRpc(): void {
-  core.register(IpcChannels.debugAvailable, () => isDebuggerAvailable())
-  core.register(IpcChannels.debugStart, () => startDebugSession())
+  core.register(IpcChannels.debugAvailable, (language) =>
+    isDebuggerAvailable(asString(language) ?? 'node')
+  )
+  core.register(IpcChannels.debugResolve, (language) =>
+    describeDebugAdapter(asString(language) ?? 'node')
+  )
+  core.register(IpcChannels.debugStart, (language) =>
+    startDebugSession(asString(language) ?? 'node')
+  )
   core.register(IpcChannels.debugAttachChild, (sessionId) => {
     const id = asString(sessionId)
     return id ? attachDebugChild(id) : { error: 'bad arguments' }

@@ -1,5 +1,6 @@
 import { IpcChannels, IpcEvents } from '@shared/ipc'
 import type { UpdateStatus } from '@shared/updates'
+import type { PullProgress } from '@shared/models'
 import type {
   AgwebApi,
   AppSettings,
@@ -240,7 +241,21 @@ export function createAgwebApi(ipcRenderer: IpcLike, host: HostCapabilities): Ag
       list: () => ipcRenderer.invoke(IpcChannels.modelsList),
       use: (role, id) => ipcRenderer.invoke(IpcChannels.modelsUse, role, id),
       status: () => ipcRenderer.invoke(IpcChannels.modelsStatus),
-      start: (provider) => ipcRenderer.invoke(IpcChannels.modelsStart, provider)
+      start: (runtime) => ipcRenderer.invoke(IpcChannels.modelsStart, runtime),
+      pull: (model) => ipcRenderer.invoke(IpcChannels.modelsPull, model),
+      pullStatus: () => ipcRenderer.invoke(IpcChannels.modelsPullStatus),
+      cancelPull: () => ipcRenderer.invoke(IpcChannels.modelsCancelPull),
+      remove: (id) => ipcRenderer.invoke(IpcChannels.modelsRemove, id),
+      recommend: () => ipcRenderer.invoke(IpcChannels.modelsRecommend),
+      test: (id) => ipcRenderer.invoke(IpcChannels.modelsTest, id),
+      addEndpoint: (name, baseUrl, apiKey) =>
+        ipcRenderer.invoke(IpcChannels.modelsEndpointAdd, name, baseUrl, apiKey ?? null),
+      removeEndpoint: (name) => ipcRenderer.invoke(IpcChannels.modelsEndpointRemove, name),
+      onPull: (listener) => {
+        const handler = (_event: unknown, progress: PullProgress): void => listener(progress)
+        ipcRenderer.on(IpcEvents.modelsPull, handler)
+        return () => ipcRenderer.removeListener(IpcEvents.modelsPull, handler)
+      }
     },
     agents: {
       start: (task, attachments) => ipcRenderer.invoke(IpcChannels.agentStart, task, attachments),
@@ -296,8 +311,9 @@ export function createAgwebApi(ipcRenderer: IpcLike, host: HostCapabilities): Ag
       }
     },
     debug: {
-      available: () => ipcRenderer.invoke(IpcChannels.debugAvailable),
-      start: () => ipcRenderer.invoke(IpcChannels.debugStart),
+      available: (language) => ipcRenderer.invoke(IpcChannels.debugAvailable, language ?? null),
+      resolve: (language) => ipcRenderer.invoke(IpcChannels.debugResolve, language),
+      start: (language) => ipcRenderer.invoke(IpcChannels.debugStart, language ?? null),
       attachChild: (sessionId) => ipcRenderer.invoke(IpcChannels.debugAttachChild, sessionId),
       send: (sessionId, message) => ipcRenderer.send(IpcChannels.debugSend, sessionId, message),
       stop: () => ipcRenderer.invoke(IpcChannels.debugStop),

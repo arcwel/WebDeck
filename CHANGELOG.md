@@ -3,7 +3,38 @@
 All notable changes to Arcwel WebDeck are recorded here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## v0.1.6 — 2026-09-14
+
+### Added (local models, phases 2–4)
+
+- **Any OpenAI-compatible server.** Settings → AI → On this Mac now has an
+  LM Studio card, detected on its default port and startable from there when
+  its CLI is installed, and _Add an OpenAI-compatible endpoint_ for
+  llama.cpp's server, vLLM, Jan or a team's box: a name, an address and an
+  optional key, kept per machine and never synced. An address that is not on
+  this Mac says so before it is added and on its card afterwards. Models from
+  every endpoint appear in the picker under On this Mac.
+- **Pull, remove, test.** Under Ollama: pull a model by name or from a short
+  list sized to this Mac's memory, with progress and a cancel; remove one
+  with a confirmation that names the space it frees; and _Test_ any local
+  model, which reports time to first token and tokens per second before you
+  commit to it. A model that does not exist is refused with Ollama's own
+  reason.
+- **Apple's on-device model.** On macOS 26 with Apple Intelligence on, Ask
+  and chat-with-page can run on Apple's model with nothing installed: an
+  _Apple on-device_ card, Ask only. Built as a small Swift helper the core
+  spawns; a build without it says so.
+
+### Added (debugging)
+
+- **Python, Go, Rust, C and C++ debugging.** The Debug block picks the
+  adapter from the active file: js-debug for JavaScript and TypeScript,
+  debugpy for Python, Delve for Go, and lldb for Rust, C, C++ and Swift —
+  codelldb when it is vendored or installed with VS Code, else Xcode's
+  lldb-dap. Adapters that speak DAP on their own stdio (debugpy, lldb-dap)
+  now work beside the socket ones. When a language has no adapter on the
+  machine, the block says what to install. `npm run fetch:dap` vendors
+  codelldb (digest-pinned) and builds Delve where Go is present.
 
 ### Added (release engineering)
 

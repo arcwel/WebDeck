@@ -14,6 +14,8 @@
  * A client that ignores `startDebugging` runs the program and stops nowhere.
  */
 
+import type { DebugLanguage } from '@shared/debug-languages'
+
 export interface DapMessage {
   seq: number
   type: 'request' | 'response' | 'event'
@@ -175,22 +177,98 @@ export function request<T = unknown>(
 }
 
 /**
+ * The launch request for an adapter: what each one needs to know where the
+ * program is. js-debug takes the file; debugpy the file; Delve the package
+ * directory (it builds it); lldb a built binary — codelldb can run `cargo
+ * build` itself, lldb-dap cannot, so for Rust it is pointed at the crate's
+ * debug binary and for C at a binary beside the source with the same stem.
+ */
+export function launchConfiguration(
+  adapterId: 'pwa-node' | 'debugpy' | 'go' | 'lldb' | 'lldb-dap',
+  language: DebugLanguage,
+  program: string,
+  cwd: string
+): Record<string, unknown> {
+  const name = 'Debug current file'
+  const dir = program.slice(0, Math.max(program.lastIndexOf('/'), 0)) || cwd
+  const stem = program.replace(/^.*\//, '').replace(/\.[^.]+$/, '')
+  const crate = cwd.replace(/\/$/, '').replace(/^.*\//, '')
+  switch (adapterId) {
+    case 'pwa-node':
+      return {
+        type: 'pwa-node',
+        request: 'launch',
+        name,
+        program,
+        cwd,
+        console: 'internalConsole',
+        internalConsoleOptions: 'neverOpen',
+        sourceMaps: true
+      }
+    case 'debugpy':
+      return {
+        type: 'python',
+        request: 'launch',
+        name,
+        program,
+        cwd,
+        console: 'internalConsole',
+        justMyCode: true
+      }
+    case 'go':
+      return { type: 'go', request: 'launch', name, mode: 'debug', program: dir, cwd }
+    case 'lldb':
+      // terminal: console — otherwise codelldb asks the client to open a
+      // terminal (runInTerminal), which this client does not provide, and the
+      // launch never completes.
+      return language === 'rust'
+        ? {
+            type: 'lldb',
+            request: 'launch',
+            name,
+            cargo: { args: ['build'] },
+            cwd,
+            terminal: 'console'
+          }
+        : {
+            type: 'lldb',
+            request: 'launch',
+            name,
+            program: `${dir}/${stem}`,
+            cwd,
+            terminal: 'console'
+          }
+    case 'lldb-dap':
+      return {
+        type: 'lldb-dap',
+        request: 'launch',
+        name,
+        program: language === 'rust' ? `${cwd}/target/debug/${crate}` : `${dir}/${stem}`,
+        cwd
+      }
+  }
+}
+
+/**
  * Bring up a session and run.
  *
  * Order is the protocol's: `initialize`, breakpoints once the adapter reports
  * `initialized`, then `configurationDone`. Sending breakpoints earlier loses
- * them. The root session then hands off to a child via `startDebugging`.
+ * them. js-debug's root session then hands off to a child via `startDebugging`;
+ * the other adapters run the program in the root session.
  */
 export async function launch(
   program: string,
   cwd: string,
-  breakpoints: Record<string, number[]>
+  breakpoints: Record<string, number[]>,
+  language: DebugLanguage = 'node'
 ): Promise<{ error?: string }> {
   sessionBreakpoints = breakpoints
   childCount = 0
 
-  const started = await window.agweb.debug.start()
-  if (started.error) return started
+  const started = await window.agweb.debug.start(language)
+  if (started.error || !started.adapterId) return { error: started.error ?? 'no adapter' }
+  const adapterId = started.adapterId
 
   const configured = new Promise<void>((resolve) => {
     const off = onDebugEvent(async (event, _body, sessionId) => {
@@ -205,26 +283,22 @@ export async function launch(
   try {
     await request('root', 'initialize', {
       clientID: 'agweb',
-      adapterID: 'pwa-node',
+      adapterID: adapterId,
       pathFormat: 'path',
       linesStartAt1: true,
       columnsStartAt1: true,
       supportsConfigurationDoneRequest: true,
-      // Without this the adapter will not use the parent/child flow at all.
-      supportsStartDebuggingRequest: true
+      supportsRunInTerminalRequest: false,
+      // Without this js-debug will not use the parent/child flow at all.
+      supportsStartDebuggingRequest: adapterId === 'pwa-node'
     })
-    // Not awaited before configurationDone: js-debug resolves `launch` only
+    // Not awaited before configurationDone: the adapters resolve `launch` only
     // after configuration completes, so awaiting here would deadlock.
-    const launched = request('root', 'launch', {
-      type: 'pwa-node',
-      request: 'launch',
-      name: 'Debug current file',
-      program,
-      cwd,
-      console: 'internalConsole',
-      internalConsoleOptions: 'neverOpen',
-      sourceMaps: true
-    })
+    const launched = request(
+      'root',
+      'launch',
+      launchConfiguration(adapterId, language, program, cwd)
+    )
     await configured
     await launched
     return {}

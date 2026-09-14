@@ -51,6 +51,8 @@ export class AnthropicProvider implements ModelProvider {
     const configured = Boolean(this.resolveKey())
     return {
       provider: 'anthropic',
+      id: 'anthropic',
+      label: 'Claude',
       installed: true,
       running: configured,
       endpoint: 'https://api.anthropic.com',

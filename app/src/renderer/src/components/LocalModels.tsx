@@ -1,32 +1,24 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { ModelInfo, ModelRole, ModelRuntimeStatus, ModelsListResult } from '@shared/models'
+import type { ModelRole, ModelRuntimeStatus, ModelsListResult } from '@shared/models'
 import { notifyModelsChanged } from '@/models-changed'
+import { ModelRow } from './local-models/ModelRow'
+import { PullModel } from './local-models/PullModel'
+import { EndpointForm } from './local-models/EndpointForm'
+import { isLocalId, modelsOf } from './local-models/format'
 
 /**
  * Models on this machine.
  *
- * Detection first: the card says whether Ollama is installed and answering,
- * and offers the one action that changes that — start it, or install it. Then
- * the models it holds, with the capabilities the runtime reports rather than
+ * One card per runtime — Ollama, LM Studio, each endpoint the user typed, and
+ * Apple's on-device model — each saying whether it is installed and answering,
+ * with the one action that changes that: start it, or install it. Under each,
+ * the models it holds with the capabilities the runtime reports rather than
  * ones we assume, because a model that cannot call tools cannot run the agent
  * and the button that would let it says so instead.
  *
  * Choosing here is per machine and never syncs; the cloud choice above is the
  * one that travels. "Back to Claude" clears the local choice for a role.
  */
-const INSTALL_URL = 'https://ollama.com/download'
-
-function formatSize(bytes?: number): string {
-  if (!bytes) return ''
-  const gb = bytes / 1_000_000_000
-  return gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(bytes / 1_000_000)} MB`
-}
-
-function formatContext(tokens?: number): string {
-  if (!tokens) return ''
-  return tokens >= 1000 ? `${Math.round(tokens / 1000)}k ctx` : `${tokens} ctx`
-}
-
 export function LocalModels(): React.JSX.Element {
   const [list, setList] = useState<ModelsListResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -58,34 +50,33 @@ export function LocalModels(): React.JSX.Element {
     }
   }, [])
 
-  const ollama = list?.runtimes.find((r) => r.provider === 'ollama')
-  const local = list?.models.filter((m) => m.local) ?? []
-
-  const use = async (role: ModelRole, id: string | null): Promise<void> => {
+  const act = async (work: () => Promise<ModelsListResult | void>): Promise<void> => {
     setBusy(true)
     setError(null)
     try {
-      setList(await window.agweb.models.use(role, id))
+      const result = await work()
+      if (result) setList(result)
+      else await refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const use = (role: ModelRole, id: string | null): Promise<void> =>
+    act(async () => {
+      const result = await window.agweb.models.use(role, id)
       notifyModelsChanged()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setBusy(false)
-    }
-  }
+      return result
+    })
 
-  const start = async (): Promise<void> => {
-    setBusy(true)
-    setError(null)
-    try {
-      await window.agweb.models.start('ollama')
-      await refresh()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setBusy(false)
-    }
-  }
+  const runtimes = list?.runtimes.filter((r) => r.provider !== 'anthropic') ?? []
+  const pulled = new Set(
+    (list?.models ?? []).filter((m) => m.provider === 'ollama').map((m) => m.model)
+  )
+  const onPulled = useCallback(() => void refresh(), [refresh])
+  const onAdded = useCallback(() => void refresh(), [refresh])
 
   return (
     <section className="rounded-lg bg-[var(--wd-well)] px-3 py-2.5" data-testid="local-models">
@@ -103,26 +94,55 @@ export function LocalModels(): React.JSX.Element {
         machine and does not sync.
       </p>
 
-      {ollama && <RuntimeCard status={ollama} busy={busy} onStart={() => void start()} />}
-
-      {local.length > 0 && (
-        <ul className="mt-2 flex flex-col gap-1">
-          {local.map((m) => (
-            <ModelRow
-              key={m.id}
-              model={m}
-              selection={list?.selection}
+      {runtimes.map((runtime) => {
+        const models = modelsOf(runtime, list?.models ?? [])
+        return (
+          <div key={runtime.id}>
+            <RuntimeCard
+              status={runtime}
               busy={busy}
-              onUse={(role) => void use(role, m.id)}
+              onStart={() =>
+                void act(() => window.agweb.models.start(runtime.id).then(() => undefined))
+              }
+              onRemove={
+                runtime.custom
+                  ? () =>
+                      void act(() =>
+                        window.agweb.models.removeEndpoint(runtime.id.replace(/^endpoint:/, ''))
+                      )
+                  : undefined
+              }
             />
-          ))}
-        </ul>
-      )}
+            {models.length > 0 && (
+              <ul className="mt-1 flex flex-col gap-1">
+                {models.map((m) => (
+                  <ModelRow
+                    key={m.id}
+                    model={m}
+                    selection={list?.selection}
+                    busy={busy}
+                    onUse={(role) => void use(role, m.id)}
+                    onRemove={
+                      m.provider === 'ollama'
+                        ? () => void act(() => window.agweb.models.remove(m.id))
+                        : undefined
+                    }
+                  />
+                ))}
+              </ul>
+            )}
+            {runtime.id === 'ollama' && runtime.running && (
+              <PullModel busy={busy} pulled={pulled} onPulled={onPulled} />
+            )}
+          </div>
+        )
+      })}
 
-      {(list?.selection.agent.startsWith('ollama/') ||
-        list?.selection.ask.startsWith('ollama/')) && (
+      <EndpointForm busy={busy} onAdded={onAdded} />
+
+      {list && (isLocalId(list.selection.agent) || isLocalId(list.selection.ask)) && (
         <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
-          {list.selection.agent.startsWith('ollama/') && (
+          {isLocalId(list.selection.agent) && (
             <button
               onClick={() => void use('agent', null)}
               disabled={busy}
@@ -131,7 +151,7 @@ export function LocalModels(): React.JSX.Element {
               Agent: back to Claude
             </button>
           )}
-          {list.selection.ask.startsWith('ollama/') && (
+          {isLocalId(list.selection.ask) && (
             <button
               onClick={() => void use('ask', null)}
               disabled={busy}
@@ -144,7 +164,10 @@ export function LocalModels(): React.JSX.Element {
       )}
 
       {error && (
-        <p className="mt-2 rounded bg-rose-500/10 px-2 py-1 text-[11px] text-rose-600 dark:text-rose-400">
+        <p
+          className="mt-2 rounded bg-rose-500/10 px-2 py-1 text-[11px] text-rose-600 dark:text-rose-400"
+          data-testid="local-models-error"
+        >
           {error}
         </p>
       )}
@@ -155,29 +178,44 @@ export function LocalModels(): React.JSX.Element {
 function RuntimeCard({
   status,
   busy,
-  onStart
+  onStart,
+  onRemove
 }: {
   status: ModelRuntimeStatus
   busy: boolean
   onStart: () => void
+  onRemove?: () => void
 }): React.JSX.Element {
   const dot = status.running ? 'bg-emerald-500' : status.installed ? 'bg-amber-500' : 'bg-slate-400'
   return (
     <div
-      className="mt-2 flex items-center gap-2 rounded-md border border-[var(--wd-glass-border)] px-2 py-1.5"
-      data-testid="runtime-ollama"
+      className="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-[var(--wd-glass-border)] px-2 py-1.5"
+      data-testid={`runtime-${status.id}`}
     >
       <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} />
-      <span className="font-medium text-[var(--wd-text)]">Ollama</span>
+      <span className="font-medium text-[var(--wd-text)]">{status.label}</span>
       <span
         className="min-w-0 flex-1 truncate text-[11px] text-[var(--wd-dim)]"
-        title={status.detail}
+        title={
+          status.endpoint
+            ? `${status.endpoint}${status.detail ? ` — ${status.detail}` : ''}`
+            : status.detail
+        }
       >
         {status.running
           ? `running${status.version ? ` · ${status.version}` : ''} · ${status.detail ?? ''}`
           : status.detail}
       </span>
-      {!status.running && status.installed && (
+      {status.remote && (
+        <span
+          className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-600 dark:text-amber-400"
+          title="Not on this Mac: page text and workspace files are sent to it."
+          data-testid="runtime-remote"
+        >
+          off this Mac
+        </span>
+      )}
+      {!status.running && status.installed && status.startable && (
         <button
           onClick={onStart}
           disabled={busy}
@@ -186,77 +224,26 @@ function RuntimeCard({
           Start
         </button>
       )}
-      {!status.installed && (
+      {!status.installed && status.installUrl && (
         <a
-          href={INSTALL_URL}
+          href={status.installUrl}
           target="_blank"
           rel="noreferrer"
           className="rounded border border-[var(--wd-glass-border)] px-2 py-0.5 text-[11px] text-[var(--wd-text)]"
         >
-          Install Ollama
+          Install {status.label}
         </a>
       )}
+      {onRemove && (
+        <button
+          onClick={onRemove}
+          disabled={busy}
+          className="rounded px-1.5 py-0.5 text-[11px] text-[var(--wd-dim)] hover:text-rose-500 disabled:opacity-40"
+          data-testid="endpoint-remove"
+        >
+          Remove
+        </button>
+      )}
     </div>
-  )
-}
-
-function ModelRow({
-  model,
-  selection,
-  busy,
-  onUse
-}: {
-  model: ModelInfo
-  selection?: { agent: string; ask: string }
-  busy: boolean
-  onUse: (role: ModelRole) => void
-}): React.JSX.Element {
-  const isAgent = selection?.agent === model.id
-  const isAsk = selection?.ask === model.id
-  const badge = (on: boolean, label: string): React.JSX.Element => (
-    <span
-      className={`rounded px-1 text-[10px] ${
-        on
-          ? 'bg-[var(--wd-accent-soft)] text-[var(--wd-accent)]'
-          : 'text-[var(--wd-dim)] line-through opacity-60'
-      }`}
-    >
-      {label}
-    </span>
-  )
-  const choice = (role: ModelRole, active: boolean, label: string): React.JSX.Element => (
-    <button
-      onClick={() => onUse(role)}
-      disabled={busy || active || (role === 'agent' && !model.capabilities.tools)}
-      title={
-        role === 'agent' && !model.capabilities.tools
-          ? 'This model cannot call tools, so it cannot run the agent.'
-          : undefined
-      }
-      className={`rounded px-2 py-0.5 text-[11px] ${
-        active
-          ? 'bg-[var(--wd-accent)] font-semibold text-white'
-          : 'border border-[var(--wd-glass-border)] text-[var(--wd-dim)] hover:text-[var(--wd-text)] disabled:opacity-40'
-      }`}
-    >
-      {active ? `${label} ✓` : label}
-    </button>
-  )
-  return (
-    <li className="flex flex-wrap items-center gap-1.5 rounded-md px-2 py-1 hover:bg-[var(--wd-hover)]">
-      <span className="font-medium text-[var(--wd-text)]">{model.model}</span>
-      <span className="text-[10px] text-[var(--wd-dim)]">
-        {[formatSize(model.sizeBytes), formatContext(model.contextLength)]
-          .filter(Boolean)
-          .join(' · ')}
-      </span>
-      {badge(model.capabilities.tools, 'tools')}
-      {badge(model.capabilities.thinking, 'thinking')}
-      {badge(model.capabilities.vision, 'vision')}
-      <span className="ml-auto flex gap-1">
-        {choice('agent', isAgent, 'Agent')}
-        {choice('ask', isAsk, 'Ask')}
-      </span>
-    </li>
   )
 }

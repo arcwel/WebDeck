@@ -10,6 +10,7 @@ import {
   type Variable
 } from '@/debug'
 import { useShellStore } from '@/store'
+import { DEBUG_LANGUAGE_LABELS, debugLanguageOf } from '@shared/debug-languages'
 
 /**
  * Debugging (task 12.4).
@@ -39,15 +40,20 @@ export function DebugBlock(): React.JSX.Element {
   const [watches, setWatches] = useState<Array<{ expression: string; value: string }>>([])
   const [watchInput, setWatchInput] = useState('')
 
+  // The adapter is the active file's: a .go file wants Delve, a .rs file lldb.
+  const language = debugLanguageOf(activePath)
+  const [unavailable, setUnavailable] = useState<string | null>(null)
   useEffect(() => {
     let live = true
-    void window.agweb.debug.available().then((v) => {
-      if (live) setAvailable(v)
+    void window.agweb.debug.resolve(language ?? 'node').then((r) => {
+      if (!live) return
+      setAvailable(!('error' in r))
+      setUnavailable('error' in r ? r.error : null)
     })
     return () => {
       live = false
     }
-  }, [])
+  }, [language])
 
   useEffect(
     () =>
@@ -124,7 +130,8 @@ export function DebugBlock(): React.JSX.Element {
         Object.entries(breakpoints)
           .filter(([, lines]) => lines.length)
           .map(([path, lines]) => [absolute(path), lines])
-      )
+      ),
+      language ?? 'node'
     )
     if (result.error) {
       setError(result.error)
@@ -134,14 +141,18 @@ export function DebugBlock(): React.JSX.Element {
 
   if (available === false) {
     return (
-      <div className="flex flex-col gap-2 p-4 text-xs text-slate-500">
+      <div
+        className="flex flex-col gap-2 p-4 text-xs text-slate-500"
+        data-testid="debug-unavailable"
+      >
         <span className="text-[13px] font-semibold text-slate-600 dark:text-slate-300">
-          Debug adapter not installed
+          {language
+            ? `No ${DEBUG_LANGUAGE_LABELS[language]} debugger on this machine`
+            : 'Debug adapter not installed'}
         </span>
         <span className="leading-relaxed">
-          js-debug is fetched at install time. Run{' '}
-          <span className="font-mono">node scripts/fetch-js-debug.mjs</span> in{' '}
-          <span className="font-mono">app/</span> and reopen this block.
+          {unavailable ??
+            'js-debug is fetched at install time. Run node scripts/fetch-js-debug.mjs in app/ and reopen this block.'}
         </span>
       </div>
     )
@@ -155,9 +166,15 @@ export function DebugBlock(): React.JSX.Element {
         {!running ? (
           <button
             onClick={() => void start()}
-            disabled={!activePath}
+            disabled={!activePath || !language}
             className="rounded bg-emerald-500 px-2 py-0.5 text-[10px] font-semibold text-white hover:bg-emerald-600 disabled:opacity-40"
-            title={activePath ? `Debug ${activePath}` : 'Open a file to debug'}
+            title={
+              !activePath
+                ? 'Open a file to debug'
+                : language
+                  ? `Debug ${activePath} (${DEBUG_LANGUAGE_LABELS[language]})`
+                  : 'No debugger for this kind of file'
+            }
             data-testid="debug-start"
           >
             Debug file

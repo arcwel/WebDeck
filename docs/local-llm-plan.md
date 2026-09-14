@@ -1,7 +1,9 @@
 # Local models: a deployment plan
 
-A plan, with its first two phases now built: the seam and the Ollama provider,
-Settings → AI → On this Mac, and the composer picker. Phases 2 to 4 remain.
+A plan, now built through all its phases: the seam, the Ollama provider,
+any OpenAI-compatible server (LM Studio detected, others typed in), model
+pulling and testing, and Apple's on-device model for Ask. What each phase
+shipped and how it was verified is at the end.
 
 ## The ask
 
@@ -191,6 +193,50 @@ How failure surfaces, by design:
 The model's plan goes through the same bounds as a user's edit of it (known
 kinds, bounded titles, no untitled steps) before it is shown for approval.
 
+### Phases 2 to 4: built and verified
+
+- **OpenAI-compatible.** One provider fronts every endpoint: LM Studio is a
+  built-in card on `http://127.0.0.1:1234/v1` (detected by its app or `lms`
+  CLI, started from the card when the CLI is there), and _Add an
+  OpenAI-compatible endpoint_ takes a name, an address and an optional key —
+  kept in `ai-endpoints.local.json` and the encrypted secret store, per
+  machine, never synced. Model ids are `openai-compatible/<endpoint>/<model>`.
+  Tool calls arrive as indexed deltas and are assembled before the tool runs;
+  the plan step sends `response_format: json_schema` and falls back to the
+  schema in the prompt when a server refuses the field. An address off
+  loopback warns before it is added and carries an _off this Mac_ badge after.
+  Verified against Ollama's own `/v1` (a real model through the compatible
+  path) and a recorded fake server in CI.
+- **Models.** Pull with progress and cancel through `/api/pull`; remove
+  through `/api/delete` with a confirmation naming the size; a short list of
+  models sized to this Mac's memory (`recommend.ts`, thresholds explained
+  there) with the pick for a new user marked; and _Test_, which times one
+  short answer and shows time to first token and tokens per second. Embeddings
+  through the local runtime are left for the workspace-search work that would
+  use them.
+- **Apple on-device.** `native/apple-llm/main.swift` is a helper the core
+  spawns: `--status` reports availability with Apple's reason when it is off,
+  and a request on stdin streams the answer as NDJSON. Built by
+  `scripts/build-apple-llm.mjs` with the system toolchain (macOS 26 SDK), copied
+  into the core runtime, signed with the rest. Ask only: the registry refuses
+  it for the agent with that sentence.
+
+### The open questions, answered
+
+1. **Ollama first, then OpenAI-compatible.** Ollama shipped first because its
+   API reports capabilities; the compatible provider followed with LM Studio
+   detected and everything else typed in.
+2. **The recommended model is `qwen3.5:9b`** on 16 GB and up, `qwen3.5:4b` on
+   8 GB, sized by the rule in `recommend.ts`; larger Qwen and Gemma models are
+   listed when they fit.
+3. **Permission modes are unchanged for local models.** A local model runs in
+   whatever mode the user chose; the guards and the policy engine are the
+   safety net either way. Holding local models to Review-driven remains open
+   for a later pass with evidence from use.
+4. **Detect and link.** No managed runtime ships; the app finds Ollama, LM
+   Studio and Apple's model where they are and offers the install link when a
+   runtime is missing.
+
 ## Risks, stated up front
 
 - **Small models call tools badly.** The agent offers many tools; a 9B model
@@ -235,10 +281,5 @@ and for scripts:
 
 ## Open for review
 
-1. Ollama first, then OpenAI-compatible — or both in phase 1?
-2. The recommended default local model for this Mac: `qwen3.5:9b` is already
-   here and does tools, thinking and vision; is that the one we point new
-   users at?
-3. Should a local model be allowed in Full autonomy at all, or held to
-   Review-driven?
-4. Detect-and-link, or ship a managed runtime later?
+Answered above. What remains open is whether a local model should be held to
+Review-driven by default, which wants evidence from real use first.

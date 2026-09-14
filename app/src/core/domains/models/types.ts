@@ -24,6 +24,8 @@ export interface TurnRequest {
   tools: ToolDef[]
   maxTokens: number
   onText?: (delta: string) => void
+  /** The model's reasoning as it streams, for a runtime that reports it apart from the answer. */
+  onThinking?: (delta: string) => void
   signal?: AbortSignal
 }
 
@@ -47,6 +49,7 @@ export interface CompleteRequest {
   user: string
   maxTokens: number
   onToken?: (token: string) => void
+  onThinking?: (delta: string) => void
   signal?: AbortSignal
 }
 
@@ -54,6 +57,8 @@ export interface ModelProvider {
   readonly id: ProviderId
   listModels(): Promise<ModelInfo[]>
   status(): Promise<ModelRuntimeStatus>
+  /** One status per runtime card, for a provider that fronts several endpoints. */
+  statuses?(): Promise<ModelRuntimeStatus[]>
   turn(request: TurnRequest): Promise<TurnResult>
   /** Returns the tool's input — the structured plan — as the model filled it. */
   plan(request: PlanRequest): Promise<Record<string, unknown>>

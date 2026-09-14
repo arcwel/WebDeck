@@ -23,18 +23,35 @@ setCoreEnv({
   }
 })
 
-const { initModelRegistry, activeModel, useModel, selection } = await import('./registry')
+const {
+  initModelRegistry,
+  activeModel,
+  useModel,
+  selection,
+  isPullableName,
+  measure,
+  addEndpoint,
+  removeEndpoint,
+  runtimeStatus
+} = await import('./registry')
 
 /** A provider that answers with whatever the test says it offers. */
 function fake(
-  id: 'anthropic' | 'ollama',
+  id: 'anthropic' | 'ollama' | 'openai-compatible' | 'apple',
   models: ModelInfo[],
   status: Partial<ModelRuntimeStatus> = {}
 ): ModelProvider {
   return {
     id,
     listModels: async () => models,
-    status: async () => ({ provider: id, installed: true, running: true, ...status }),
+    status: async () => ({
+      provider: id,
+      id,
+      label: id,
+      installed: true,
+      running: true,
+      ...status
+    }),
     turn: async () => ({ content: [], stopReason: 'end_turn' }),
     plan: async () => ({}),
     complete: async () => ''
@@ -70,6 +87,14 @@ const tiny: ModelInfo = {
   label: 'tiny',
   capabilities: { tools: false, thinking: false, vision: false }
 }
+const onDevice: ModelInfo = {
+  id: 'apple/on-device',
+  provider: 'apple',
+  model: 'on-device',
+  label: 'Apple on-device',
+  local: true,
+  capabilities: { tools: false, thinking: false, vision: false }
+}
 
 describe('which model answers', () => {
   let cloud = 'claude-opus-5'
@@ -79,9 +104,36 @@ describe('which model answers', () => {
     initModelRegistry({
       anthropic: fake('anthropic', [claude, sonnet]),
       ollama: fake('ollama', [qwen, tiny]),
+      apple: fake('apple', [onDevice]),
       cloudModel: () => cloud,
       setCloudModel: (m) => (cloud = m)
     })
+  })
+
+  it("offers Apple's on-device model for Ask and refuses it for the agent by name", async () => {
+    await expect(useModel('agent', 'apple/on-device')).rejects.toThrow(
+      /Apple's on-device model answers Ask but cannot run the agent/
+    )
+    await useModel('ask', 'apple/on-device')
+    expect(activeModel('ask')).toMatchObject({ id: 'apple/on-device', local: true })
+  })
+
+  it('reports one card per runtime, endpoints included', async () => {
+    const ids = (await runtimeStatus()).map((s) => s.id)
+    expect(ids).toEqual(['anthropic', 'ollama', 'lmstudio', 'apple'])
+  })
+
+  it('an endpoint is a card and a model source, and removing it clears a choice that named it', async () => {
+    addEndpoint('team', 'http://127.0.0.1:1', undefined)
+    expect((await runtimeStatus()).map((s) => s.id)).toContain('endpoint:team')
+    await expect(useModel('ask', 'openai-compatible/team/x')).rejects.toThrow(
+      /team is not answering at http:\/\/127\.0\.0\.1:1\/v1/
+    )
+    await expect(useModel('ask', 'openai-compatible/nowhere/x')).rejects.toThrow(
+      /does not name a known endpoint/
+    )
+    const after = await removeEndpoint('team')
+    expect(after.runtimes.map((s) => s.id)).not.toContain('endpoint:team')
   })
 
   it('is the synced cloud model until a local one is chosen', () => {
@@ -138,5 +190,27 @@ describe('which model answers', () => {
     await useModel('agent', 'ollama/qwen3.5:9b')
     await useModel('agent', null)
     expect(activeModel('agent').local).toBe(false)
+  })
+})
+
+describe('pull names and the test measurement', () => {
+  it('accepts library tags and namespaced models, refuses anything else', () => {
+    expect(isPullableName('qwen3.5:9b')).toBe(true)
+    expect(isPullableName('gemma3')).toBe(true)
+    expect(isPullableName('hf.co/org/model:Q4_K_M')).toBe(false)
+    expect(isPullableName('org/model:tag')).toBe(true)
+    expect(isPullableName('bad name')).toBe(false)
+    expect(isPullableName(':tag')).toBe(false)
+    expect(isPullableName('')).toBe(false)
+  })
+
+  it('measures first token and a rate from the streamed pieces', () => {
+    const r = measure('ollama/x', '  hi there  ', 11, 1000, 1400, 2400)
+    expect(r).toMatchObject({ firstTokenMs: 400, totalMs: 1400, tokens: 11, sample: 'hi there' })
+    expect(r.tokensPerSecond).toBe(10)
+    expect(measure('x', '', 0, 0, 5, 5)).toMatchObject({
+      tokensPerSecond: 0,
+      sample: expect.stringContaining('thinking')
+    })
   })
 })

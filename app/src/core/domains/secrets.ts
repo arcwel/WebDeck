@@ -109,6 +109,47 @@ export function clearApiKey(provider: unknown): boolean {
   return true
 }
 
+/**
+ * A key for a user-typed model endpoint, kept in the same encrypted store under
+ * `endpoint:<name>`. Not a provider the settings key rows know: those three are
+ * the cloud providers, and an endpoint is whatever the user pointed at.
+ */
+const ENDPOINT_PREFIX = 'endpoint:'
+
+export function setEndpointKey(name: string, key: string): boolean {
+  if (!name || key.trim() === '') return clearEndpointKey(name)
+  if (!coreEnv().secrets.isAvailable()) return false
+  const all = loadAll()
+  all[`${ENDPOINT_PREFIX}${name}`] = {
+    value: coreEnv().secrets.encryptString(key).toString('base64'),
+    encrypted: true
+  }
+  saveAll(all)
+  return true
+}
+
+export function getEndpointKey(name: string): string | null {
+  const stored = loadAll()[`${ENDPOINT_PREFIX}${name}`]
+  if (!stored) return null
+  if (!stored.encrypted) return stored.value
+  try {
+    return coreEnv().secrets.decryptString(Buffer.from(stored.value, 'base64'))
+  } catch {
+    return null
+  }
+}
+
+export function hasEndpointKey(name: string): boolean {
+  return Boolean(loadAll()[`${ENDPOINT_PREFIX}${name}`])
+}
+
+export function clearEndpointKey(name: string): boolean {
+  const all = loadAll()
+  delete all[`${ENDPOINT_PREFIX}${name}`]
+  saveAll(all)
+  return true
+}
+
 export function isEncryptionAvailable(): boolean {
   return coreEnv().secrets.isAvailable()
 }

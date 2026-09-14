@@ -287,55 +287,72 @@ work below.
   If none is found, `resolveDebugAdapter('python')` returns a clear error
   (`… no python3 was found on PATH`) instead of throwing — debugging simply
   reports unavailable.
-- **Spawn recipe:** `python3 -m debugpy.adapter` (stdio DAP). Remaining work:
-  wire a stdio DAP connection (read/write `Content-Length`-framed messages over
-  the child's stdin/stdout) parallel to the js-debug socket path, reachable once
-  `debugStart` carries a language id.
+- **Spawn recipe:** `python3 -m debugpy.adapter` (stdio DAP). **Wired:** the
+  core's stdio transport frames messages over the child's stdin/stdout
+  (`openStdioConnection`), and `debugStart` carries the language id the
+  renderer derives from the active file (`shared/debug-languages.ts`). Launch
+  shape: `{ type: 'python', request: 'launch', program, cwd, justMyCode }`.
 
-### 3. Go — Delve (TODO; do NOT bundle)
+### 3. Go — Delve (wired; vendored on demand)
 
 - **Binary source:** Delve (`dlv`), <https://github.com/go-delve/delve>, MIT.
-  Install with `go install github.com/go-delve/delve/cmd/dlv@latest`, or vendor a
-  prebuilt binary per-platform. Large native binary — do **not** download it in
-  the build.
-- **Runtime path (if vendored):** alongside js-debug under
-  `resources/delve/<platform>-<arch>/dlv`, copied into the runtime by
-  `build-core.mjs` (prune foreign platforms as js-debug does) and codesigned as
-  its own Mach-O part on macOS.
-- **Spawn:** `dlv dap --listen=127.0.0.1:0` (native binary, **not** via
-  `process.execPath`); DAP over the socket it opens — reuse the js-debug
-  `waitForPort` + socket transport.
+  No prebuilt release binaries exist, so it is built with
+  `go install github.com/go-delve/delve/cmd/dlv@latest` by
+  `scripts/fetch-dap-bins.mjs` (`npm run fetch:dap -- --only delve`) on a machine
+  with a Go toolchain, into `resources/dap-bin/delve/<platform>-<arch>/dlv`;
+  `build-core.mjs` copies it into the runtime and restores its execute bit.
+- **Also found:** `dlv` on PATH, and `~/go/bin/dlv` — so a developer who
+  already has Delve needs nothing vendored.
+- **Spawn:** `dlv dap --listen=127.0.0.1:0`; the core reads the port from
+  Delve's `DAP server listening at: 127.0.0.1:<port>` line and connects over
+  the same socket transport js-debug uses. Launch shape:
+  `{ type: 'go', request: 'launch', mode: 'debug', program: <package dir>, cwd }`
+  — Delve builds the package itself.
+- **Not verified on a real Go program yet** (no Go toolchain on the build
+  machine); the resolver and the banner parse are unit-tested with a fake
+  `dlv`.
 
-### 4. Rust — codelldb (TODO; do NOT bundle)
+### 4. Rust, C, C++, Swift — lldb (wired)
 
-- **Binary source:** **codelldb** from the vscode-lldb releases,
-  <https://github.com/vadimcn/codelldb> (MIT). Ships the `codelldb` adapter plus
-  a bundled LLDB — a large per-platform native payload. Do **not** download it in
-  the build. (`rust-analyzer` is the matching **LSP** — now wired: a native-binary
-  `SERVERS` entry, vendored by `fetch-lsp-bins.mjs`, spawned directly rather than
-  through the Node require-anchor. See the LSP section above.)
-- **Runtime path (if vendored):** `resources/codelldb/<platform>-<arch>/`
-  (`adapter/codelldb` + its `lldb/`), copied by `build-core.mjs`, foreign
-  platforms pruned, codesigned per part on macOS.
-- **Spawn:** `codelldb --port 0` (native binary); DAP over the socket it reports —
-  reuse the js-debug socket transport.
+Two adapters, tried in order:
+
+- **codelldb** from the vscode-lldb releases, <https://github.com/vadimcn/codelldb>
+  (MIT), vendored by `scripts/fetch-dap-bins.mjs` (`npm run fetch:dap -- --only
+codelldb`): the release `.vsix` is downloaded, its sha256 checked against the
+  pin in the script, and `extension/adapter` + `extension/lldb` unpacked to
+  `resources/dap-bin/codelldb/<platform>-<arch>/`. About 150 MB unpacked, which
+  is why the core build does not run this on its own. The copy VS Code's
+  CodeLLDB extension installs (`~/.vscode/extensions/vadimcn.vscode-lldb-*`) is
+  found too. Spawn: `codelldb --port 0`, port read from `Listening on port N`,
+  socket transport. Launch shape for Rust: `{ type: 'lldb', request: 'launch',
+cargo: { args: ['build'] }, cwd }` — codelldb builds and picks the binary; for
+  C: `program` is a binary beside the source with the same stem.
+- **lldb-dap**, which Xcode ships (`xcrun --find lldb-dap`) and LLVM installs put
+  on PATH: nothing vendored, DAP over stdio. Launch shape:
+  `{ type: 'lldb-dap', request: 'launch', program, cwd }` where `program` is
+  `<workspace>/target/debug/<crate>` for Rust and `<dir>/<stem>` for C — build
+  first (`cargo build`, or `clang -g hello.c -o hello`).
+
+`rust-analyzer` remains the matching **LSP** (vendored by `fetch-lsp-bins.mjs`).
 
 ---
 
 ## Summary
 
-| Language   | LSP                                                 | DAP                                         |
-| ---------- | --------------------------------------------------- | ------------------------------------------- |
-| TypeScript | ✅ typescript-language-server (bundled)             | ✅ js-debug (bundled)                       |
-| Python     | ✅ pyright (bundled)                                | 🟡 debugpy (system interpreter, scaffolded) |
-| Go         | 🟡 gopls (native binary; `go install`, scaffolded)  | 🟡 Delve (TODO, vendor per above)           |
-| Rust       | 🟡 rust-analyzer (native binary; prebuilt vendored) | 🟡 codelldb (TODO, vendor per above)        |
+| Language   | LSP                                                 | DAP                                                   |
+| ---------- | --------------------------------------------------- | ----------------------------------------------------- |
+| TypeScript | ✅ typescript-language-server (bundled)             | ✅ js-debug (bundled)                                 |
+| Python     | ✅ pyright (bundled)                                | ✅ debugpy (system interpreter, stdio transport)      |
+| Go         | 🟡 gopls (native binary; `go install`, scaffolded)  | 🟡 Delve (`fetch:dap` or on PATH; unverified on Go)   |
+| Rust       | 🟡 rust-analyzer (native binary; prebuilt vendored) | ✅ lldb-dap (Xcode) or codelldb (`fetch:dap`/VS Code) |
+| C / C++    | —                                                   | ✅ lldb-dap (Xcode) or codelldb                       |
 
-🟡 for Go/Rust LSP: the **backend + vendoring are done** — rust-analyzer is a
-prebuilt download (auto-vendored), gopls builds via `go install` (scaffolded when
-no Go toolchain). Two follow-ups to reach ✅ end-to-end: (1) add the `rust`/`go`
-lines to `SERVER_LANGUAGES` in `src/renderer/src/lsp.ts` (see "Renderer wiring"),
-and (2) for Go, vendor gopls on a machine with Go.
+🟡 for Go LSP: the **backend + vendoring are done** — gopls builds via
+`go install` (scaffolded when no Go toolchain). Rust LSP: rust-analyzer is a
+prebuilt download (auto-vendored). Follow-ups to reach ✅ end-to-end: (1) add
+the `rust`/`go` lines to `SERVER_LANGUAGES` in `src/renderer/src/lsp.ts` (see
+"Renderer wiring"), and (2) for Go, vendor gopls and Delve on a machine with Go
+and run a real program under them.
 
 ✅ fully working · 🟡 scaffolded / documented, needs vendoring or transport wiring
 </content>

@@ -71,14 +71,14 @@ Four things follow from that ordering:
 - **Five guards, each its own switch**: payments & checkout, banking & brokerage, passwords & identity, email & messaging, posting publicly. A guard makes the agent ask before it navigates to, clicks, types in or runs script on that kind of page, even under full autonomy. Inline prompts name the guard that asked; an audit log records every decision. The policy gate fails closed.
 - Conversations rename, branch from any turn, export, and hand back to the composer.
 
-- **Or on a model on this Mac.** Settings → AI → On this Mac lists what Ollama holds, with the capabilities the runtime reports, and either the agent or Ask can run there. Nothing leaves the machine, no key is needed, and the choice stays on this machine. When the runtime is not answering, or a model garbles a tool call or stops mid-answer, the agent says so in a sentence and stops, rather than guessing.
+- **Or on a model on this Mac.** Settings → AI → On this Mac lists what Ollama holds, what LM Studio or any OpenAI-compatible endpoint you add is serving, and on macOS 26 Apple's own on-device model, each with the capabilities the runtime reports. Pull a model from a list sized to your memory, test one for speed before you commit, and let the agent or Ask run there. Nothing leaves the machine, no key is needed, and the choice stays on this machine. When the runtime is not answering, or a model garbles a tool call or stops mid-answer, the agent says so in a sentence and stops, rather than guessing.
 
 ### A genuine IDE
 
 - Editor on **VS Code's service layer**: real `settings.json` and `keybindings.json`, themes, TextMate grammars, quick-access, breadcrumbs, outline, minimap.
 - **Extensions from Open VSX** run in the web extension host; each contributed view becomes a Deck block.
 - **Language intelligence** over LSP: completion, go-to-definition, references, rename, hover, diagnostics, code actions. Servers ship inside the core for TypeScript and JavaScript (typescript-language-server), Python (pyright) and Rust (rust-analyzer); Go uses your `gopls`. Adding one is documented in [`app/docs/LANGUAGE_SUPPORT.md`](app/docs/LANGUAGE_SUPPORT.md).
-- **Debugging** with Microsoft's js-debug: breakpoints, stepping, call stack, variables, watch, source maps.
+- **Debugging** picked by the file: js-debug for JavaScript and TypeScript, debugpy for Python, Delve for Go, lldb for Rust, C and C++ — breakpoints, stepping, call stack, variables, watch, source maps.
 - **Source control**: status, staged and unstaged diffs, stage, commit, branches.
 - **Tasks** with problem matchers, so a build error lands as a squiggle on the line that caused it.
 - **Terminal** on node-pty, **multi-root workspaces**, workspace search, dev-server preview.
@@ -296,22 +296,22 @@ The shell page owns the window and streams the stage rectangle to the browser; C
 
 ## Documentation
 
-| Document                                                                                                        | Read it when                                                                              |
-| :-------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------- |
-| [Getting Started](docs/getting-started.md)                                                                      | You have just installed it                                                                |
-| [Agent Workflows](docs/agent-workflows.md) · [Permission Modes](docs/permission-modes.md)                       | You are giving the agent work                                                             |
-| [Document Studio](docs/document-studio.md) · [Settings Sync](docs/settings-sync.md)                             | You want the rendered docs or the same setup on two machines                              |
-| [Local models](docs/local-llm-plan.md)                                                                          | Running the agent and Ask on a model on this Mac: what is built (Ollama), what is planned |
-| [Windows plan](docs/windows-plan.md)                                                                            | Shipping WebDeck on Windows 11: what carries over, what changes, in phases (a plan)       |
-| [Devices plan](docs/device-sync-plan.md)                                                                        | Tabs from your other devices, and sending things between them (a plan)                    |
-| [`PRD.md`](PRD.md) · [`ROADMAP.md`](ROADMAP.md)                                                                 | You want to know what it is for and where it is going                                     |
-| [`DESIGN.md`](DESIGN.md)                                                                                        | You are changing how the Deck looks or moves                                              |
-| [`IDE_FOUNDATION.md`](IDE_FOUNDATION.md)                                                                        | You are touching the editor, LSP or DAP                                                   |
-| [`SECURITY.md`](SECURITY.md)                                                                                    | You are touching the agent, the policy gate or a process boundary                         |
-| [`chromium/README.md`](chromium/README.md) · [`chromium/SHELL_ARCHITECTURE.md`](chromium/SHELL_ARCHITECTURE.md) | You are working on the fork or the Shell interface                                        |
-| [`chromium/RELEASING.md`](chromium/RELEASING.md) · [`chromium/SHIPPABLE.md`](chromium/SHIPPABLE.md)             | You are cutting a release                                                                 |
-| [`CHANGELOG.md`](CHANGELOG.md)                                                                                  | You want to know what changed                                                             |
-| [`sync/README.md`](sync/README.md)                                                                              | You want to run the sync or identity service, or change the protocol                      |
+| Document                                                                                                        | Read it when                                                                                            |
+| :-------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------ |
+| [Getting Started](docs/getting-started.md)                                                                      | You have just installed it                                                                              |
+| [Agent Workflows](docs/agent-workflows.md) · [Permission Modes](docs/permission-modes.md)                       | You are giving the agent work                                                                           |
+| [Document Studio](docs/document-studio.md) · [Settings Sync](docs/settings-sync.md)                             | You want the rendered docs or the same setup on two machines                                            |
+| [Local models](docs/local-llm-plan.md)                                                                          | Running the agent and Ask on a model on this Mac: Ollama, any OpenAI-compatible server, Apple on-device |
+| [Windows plan](docs/windows-plan.md)                                                                            | Shipping WebDeck on Windows 11: what carries over, what changes, in phases (a plan)                     |
+| [Devices plan](docs/device-sync-plan.md)                                                                        | Tabs from your other devices, and sending things between them (a plan)                                  |
+| [`PRD.md`](PRD.md) · [`ROADMAP.md`](ROADMAP.md)                                                                 | You want to know what it is for and where it is going                                                   |
+| [`DESIGN.md`](DESIGN.md)                                                                                        | You are changing how the Deck looks or moves                                                            |
+| [`IDE_FOUNDATION.md`](IDE_FOUNDATION.md)                                                                        | You are touching the editor, LSP or DAP                                                                 |
+| [`SECURITY.md`](SECURITY.md)                                                                                    | You are touching the agent, the policy gate or a process boundary                                       |
+| [`chromium/README.md`](chromium/README.md) · [`chromium/SHELL_ARCHITECTURE.md`](chromium/SHELL_ARCHITECTURE.md) | You are working on the fork or the Shell interface                                                      |
+| [`chromium/RELEASING.md`](chromium/RELEASING.md) · [`chromium/SHIPPABLE.md`](chromium/SHIPPABLE.md)             | You are cutting a release                                                                               |
+| [`CHANGELOG.md`](CHANGELOG.md)                                                                                  | You want to know what changed                                                                           |
+| [`sync/README.md`](sync/README.md)                                                                              | You want to run the sync or identity service, or change the protocol                                    |
 
 ## Contributing
 

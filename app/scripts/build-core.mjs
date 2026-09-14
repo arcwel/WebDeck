@@ -298,11 +298,24 @@ try {
   // the script being unrunnable. Never break the core build over LSP binaries.
 }
 
+// Apple's on-device model helper (Foundation Models, macOS 26): a Swift binary
+// built with the system toolchain. Skipped, not failed, anywhere it cannot be
+// built; the provider then reports "not in this build".
+try {
+  execFileSync(process.execPath, [join(root, 'scripts', 'build-apple-llm.mjs')], {
+    cwd: root,
+    stdio: asJson ? 'ignore' : 'inherit'
+  })
+} catch {
+  // Never break the core build over the helper.
+}
+
 // resources/ is looked up relative to appDir, which the core points at the
-// runtime directory. js-debug and lsp-bin are vendored separately and may be
-// absent (offline install/build); copy whatever is present.
+// runtime directory. js-debug, lsp-bin, dap-bin and apple-llm are vendored or
+// built separately and may be absent (offline install/build); copy whatever is
+// present.
 mkdirSync(join(runtimeDir, 'resources'), { recursive: true })
-for (const entry of ['pty-host.cjs', 'js-debug', 'lsp-bin']) {
+for (const entry of ['pty-host.cjs', 'js-debug', 'lsp-bin', 'dap-bin', 'apple-llm']) {
   const src = join(root, 'resources', entry)
   if (existsSync(src)) cpSync(src, join(runtimeDir, 'resources', entry), { recursive: true })
 }
@@ -320,6 +333,20 @@ for (const tool of ['rust-analyzer', 'gopls']) {
   )
   if (existsSync(bin)) chmodSync(bin, 0o755)
 }
+// The same for the Apple helper and the debug adapters (dlv, codelldb and the
+// lldb tree beside it), which are exec'd too.
+const platformDir = `${process.platform}-${process.arch}`
+const appleHelper = join(runtimeDir, 'resources', 'apple-llm', platformDir, 'webdeck-apple-llm')
+if (existsSync(appleHelper)) chmodSync(appleHelper, 0o755)
+function chmodTree(dir) {
+  if (!existsSync(dir)) return
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name)
+    if (entry.isDirectory()) chmodTree(full)
+    else if (!/\.(py|txt|md|json|html|css|js)$/.test(entry.name)) chmodSync(full, 0o755)
+  }
+}
+chmodTree(join(runtimeDir, 'resources', 'dap-bin'))
 
 // js-debug ships prebuilt native addons for every platform it supports, so the
 // mac runtime picks up Windows PE and Linux ELF `.node` files it will never

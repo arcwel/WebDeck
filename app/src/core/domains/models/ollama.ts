@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { delimiter, join } from 'node:path'
 import type Anthropic from '@anthropic-ai/sdk'
-import type { ModelInfo, ModelRuntimeStatus } from '@shared/models'
+import type { ModelInfo, ModelRuntimeStatus, PullProgress } from '@shared/models'
 import type {
   AssistantBlock,
   ChatMessage,
@@ -173,6 +173,16 @@ export class OllamaProvider implements ModelProvider {
 
   async status(): Promise<ModelRuntimeStatus> {
     const installed = ollamaInstalled() || this.endpoint !== DEFAULT_OLLAMA_ENDPOINT
+    const base: ModelRuntimeStatus = {
+      provider: 'ollama',
+      id: 'ollama',
+      label: 'Ollama',
+      installed,
+      running: false,
+      endpoint: this.endpoint,
+      startable: ollamaBinary() !== null,
+      installUrl: 'https://ollama.com/download'
+    }
     try {
       const response = await this.fetchImpl(`${this.endpoint}/api/version`, {
         signal: AbortSignal.timeout(STATUS_TIMEOUT_MS)
@@ -182,10 +192,9 @@ export class OllamaProvider implements ModelProvider {
       this.lastKnownRunning = true
       const models = await this.listModels()
       return {
-        provider: 'ollama',
+        ...base,
         installed: true,
         running: true,
-        endpoint: this.endpoint,
         version,
         detail:
           models.length === 0
@@ -196,12 +205,95 @@ export class OllamaProvider implements ModelProvider {
       this.lastKnownRunning = false
       const reason = error instanceof Error ? error.message : String(error)
       return {
-        provider: 'ollama',
-        installed,
-        running: false,
-        endpoint: this.endpoint,
+        ...base,
         detail: installed ? `Installed, not running (${reason})` : 'Not installed'
       }
+    }
+  }
+
+  /** Forget the model list, so the next look asks the runtime again. */
+  invalidate(): void {
+    this.listed = null
+  }
+
+  /**
+   * Pull a model, reporting progress as Ollama streams it: a status line per
+   * layer with bytes completed and total. Resolves when the pull is done;
+   * rejects with Ollama's own message for a tag that does not exist.
+   */
+  async pull(
+    model: string,
+    onProgress: (progress: PullProgress) => void,
+    signal?: AbortSignal
+  ): Promise<void> {
+    let response: Response
+    try {
+      response = await this.fetchImpl(`${this.endpoint}/api/pull`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ model, stream: true }),
+        signal
+      })
+    } catch (error) {
+      throw this.describe(error)
+    }
+    if (!response.ok || !response.body) {
+      const detail = await response.text().catch(() => '')
+      throw new Error(`Ollama refused the pull: ${detail || `${response.status}`}`)
+    }
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    const handle = (line: string): void => {
+      if (!line.trim()) return
+      const chunk = JSON.parse(line) as {
+        status?: string
+        total?: number
+        completed?: number
+        error?: string
+      }
+      if (chunk.error) throw new Error(pullError(model, chunk.error))
+      onProgress({
+        model,
+        status: chunk.status ?? '',
+        total: chunk.total,
+        completed: chunk.completed,
+        done: chunk.status === 'success'
+      })
+    }
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      let cut = buffer.indexOf('\n')
+      while (cut !== -1) {
+        handle(buffer.slice(0, cut))
+        buffer = buffer.slice(cut + 1)
+        cut = buffer.indexOf('\n')
+      }
+    }
+    if (buffer.trim()) handle(buffer)
+    this.invalidate()
+  }
+
+  /** Remove a pulled model. A model that is not there is reported, not ignored. */
+  async remove(model: string): Promise<void> {
+    let response: Response
+    try {
+      response = await this.fetchImpl(`${this.endpoint}/api/delete`, {
+        method: 'DELETE',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ model }),
+        signal: AbortSignal.timeout(STATUS_TIMEOUT_MS * 10)
+      })
+    } catch (error) {
+      throw this.describe(error)
+    }
+    this.invalidate()
+    if (response.status === 404) throw new Error(`"${model}" is not pulled.`)
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '')
+      throw new Error(`Ollama could not remove "${model}": ${detail || response.status}`)
     }
   }
 
@@ -372,6 +464,7 @@ export class OllamaProvider implements ModelProvider {
           text += delta
           request.onText?.(delta)
         }
+        if (chunk.message?.thinking) request.onThinking?.(chunk.message.thinking)
         for (const call of chunk.message?.tool_calls ?? []) {
           calls.push({
             name: call.function.name,
@@ -459,6 +552,7 @@ export class OllamaProvider implements ModelProvider {
           text += delta
           request.onToken?.(delta)
         }
+        if (chunk.message?.thinking) request.onThinking?.(chunk.message.thinking)
       }
     )
     return text
@@ -483,6 +577,14 @@ export class OllamaProvider implements ModelProvider {
     }
     return { ...(await this.status()), detail: 'Started, but it has not answered yet' }
   }
+}
+
+/** Ollama's pull errors, as sentences: the common one is a tag that is not in the library. */
+function pullError(model: string, error: string): string {
+  if (/not found|does not exist|file does not exist|manifest unknown/i.test(error)) {
+    return `"${model}" is not in the Ollama library. Check the name at ollama.com/library.`
+  }
+  return `Ollama could not pull "${model}": ${error}`
 }
 
 /**

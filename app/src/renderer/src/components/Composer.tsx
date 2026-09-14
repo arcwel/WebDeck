@@ -56,6 +56,13 @@ const SLASH_COMMANDS: { name: string; hint: string; template: string }[] = [
 
 const MAX_CHARS = 12000
 
+/** The pill's short name: `opus-5`, `qwen3.5:9b`, or an endpoint model's own name. */
+function modelLabel(id: string, models: ModelInfo[]): string {
+  const known = models.find((m) => m.id === id)
+  if (known?.provider === 'openai-compatible') return known.label
+  return id.replace(/^[a-z-]+\//, '').replace('claude-', '')
+}
+
 /** What to do with a page, offered when Ask brings one in and the box is empty. */
 const PAGE_STARTERS = [
   'Summarize this page',
@@ -77,6 +84,7 @@ export function Composer({
   const policy = usePolicyStatus()
   const [models, setModels] = useState<ModelInfo[]>(FALLBACK_MODELS)
   const [model, setModel] = useState<string>(FALLBACK_MODELS[0].id)
+  const isLocal = !model.startsWith('anthropic/')
   // The list and the choice are the core's: a local model appears only when
   // its runtime answers, and choosing one here is the same act as choosing it
   // under Settings → AI.
@@ -454,17 +462,15 @@ export function Composer({
               onClick={() => setModelOpen((o) => !o)}
               className="flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 text-[11px] text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
               aria-label="Model"
-              title={
-                model.startsWith('ollama/') ? 'Runs on this Mac — nothing leaves it' : undefined
-              }
+              title={isLocal ? 'Runs on this Mac — nothing leaves it' : undefined}
             >
               <span
                 className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                  model.startsWith('ollama/') ? 'bg-sky-500' : 'bg-emerald-500'
+                  isLocal ? 'bg-sky-500' : 'bg-emerald-500'
                 }`}
               />
-              {model.replace(/^[a-z]+\//, '').replace('claude-', '')}
-              {model.startsWith('ollama/') && <span className="text-slate-400"> · local</span>}
+              {modelLabel(model, models)}
+              {isLocal && <span className="text-slate-400"> · local</span>}
             </button>
             {modelOpen && (
               <div className="absolute bottom-full left-0 mb-1.5 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-[#0e1420]">
@@ -495,7 +501,7 @@ export function Composer({
                             m.id === model ? 'font-semibold' : ''
                           }`}
                         >
-                          {m.model}
+                          {m.provider === 'openai-compatible' ? m.label : m.model}
                         </button>
                       ))}
                     </div>

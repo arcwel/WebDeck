@@ -80,7 +80,7 @@ export interface AgentKeyStatus {
   /** The provider's own name for the model in force for the agent. */
   model: string
   /** Who answers: 'anthropic' or 'ollama'. Absent only in status objects saved before providers existed. */
-  provider?: 'anthropic' | 'ollama'
+  provider?: import('./models').ProviderId
   /** The model runs on this machine; nothing leaves it. */
   local?: boolean
 }

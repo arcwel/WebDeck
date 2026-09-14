@@ -755,6 +755,14 @@ export const IpcChannels = {
   modelsUse: 'models:use',
   modelsStatus: 'models:status',
   modelsStart: 'models:start',
+  modelsPull: 'models:pull',
+  modelsPullStatus: 'models:pull-status',
+  modelsCancelPull: 'models:cancel-pull',
+  modelsRemove: 'models:remove',
+  modelsRecommend: 'models:recommend',
+  modelsTest: 'models:test',
+  modelsEndpointAdd: 'models:endpoint-add',
+  modelsEndpointRemove: 'models:endpoint-remove',
   // The release checker (core): what it last found, ask it now, "not now".
   updatesStatus: 'updates:status',
   updatesCheck: 'updates:check',
@@ -769,6 +777,7 @@ export const IpcChannels = {
   debugStop: 'debug:stop',
   debugAttachChild: 'debug:attach-child',
   debugAvailable: 'debug:available',
+  debugResolve: 'debug:resolve',
   settingsRead: 'settings:read',
   settingsWrite: 'settings:write',
   settingsImport: 'settings:import',
@@ -890,7 +899,8 @@ export const IpcEvents = {
   updateStatusChanged: 'event:update-status',
   syncPulled: 'event:sync-pulled',
   themeChanged: 'event:theme-changed',
-  jupyterOutput: 'event:jupyter-output'
+  jupyterOutput: 'event:jupyter-output',
+  modelsPull: 'event:models-pull'
 } as const
 
 /** WebDeck Sync (settings sync via a local-first file) status for the UI. */
@@ -1344,7 +1354,22 @@ export interface AgwebApi {
       id: string | null
     ): Promise<import('./models').ModelsListResult>
     status(): Promise<import('./models').ModelRuntimeStatus[]>
-    start(provider: import('./models').ProviderId): Promise<import('./models').ModelRuntimeStatus>
+    /** Start a runtime by its card id: `ollama` or `lmstudio`. */
+    start(runtime: string): Promise<import('./models').ModelRuntimeStatus>
+    /** Begin an Ollama pull; progress arrives through onPull, the last event carrying done or error. */
+    pull(model: string): Promise<import('./models').PullProgress>
+    pullStatus(): Promise<import('./models').PullProgress | null>
+    cancelPull(): Promise<boolean>
+    remove(id: string): Promise<import('./models').ModelsListResult>
+    recommend(): Promise<import('./models').ModelRecommendations>
+    test(id: string): Promise<import('./models').ModelTestResult>
+    addEndpoint(
+      name: string,
+      baseUrl: string,
+      apiKey?: string
+    ): Promise<import('./models').CustomEndpoint>
+    removeEndpoint(name: string): Promise<import('./models').ModelsListResult>
+    onPull(listener: (progress: import('./models').PullProgress) => void): () => void
   }
   agents: {
     /** Start planning a task; resolves to the new session id. Attachments are
@@ -1443,9 +1468,19 @@ export interface AgwebApi {
    * install; main owns the process and the socket, the renderer speaks DAP.
    */
   debug: {
-    /** False when the adapter was not vendored (offline install). */
-    available(): Promise<boolean>
-    start(): Promise<{ error?: string }>
+    /** Whether a language's adapter can start on this machine (js-debug when no language is given). */
+    available(language?: import('./debug-languages').DebugLanguage): Promise<boolean>
+    /** The adapter a language would use, or why it cannot start here. */
+    resolve(language: import('./debug-languages').DebugLanguage): Promise<
+      | {
+          adapterId: 'pwa-node' | 'debugpy' | 'go' | 'lldb' | 'lldb-dap'
+          transport: 'socket' | 'stdio'
+        }
+      | { error: string }
+    >
+    start(
+      language?: import('./debug-languages').DebugLanguage
+    ): Promise<{ error?: string; adapterId?: 'pwa-node' | 'debugpy' | 'go' | 'lldb' | 'lldb-dap' }>
     /** Open a child connection for a `startDebugging` reverse request. */
     attachChild(sessionId: string): Promise<{ error?: string }>
     send(sessionId: string, message: unknown): void
