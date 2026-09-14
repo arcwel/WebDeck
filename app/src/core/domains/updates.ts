@@ -46,6 +46,15 @@ const FETCH_TIMEOUT_MS = 10_000
 const NOTES_CAP = 2000
 /** Progress is pushed at most this often, so a fast link does not flood the shell. */
 const PROGRESS_EVERY_MS = 200
+/** No bytes for this long and the transfer is given up as stalled, rather than
+ *  sitting at "Downloading…" for as long as the socket stays open. */
+let stallMs = 60_000
+/** The checksum file is tiny; a fetch of it that takes longer than this is not
+ *  going to finish. */
+const CHECKSUM_TIMEOUT_MS = 30_000
+/** The archive is written through a buffer this big, so a fast link is not
+ *  paced by a 16 KB stream buffer draining thousands of times. */
+const WRITE_BUFFER_BYTES = 4 * 1024 * 1024
 
 interface Stored {
   checkedAt?: string
@@ -68,6 +77,11 @@ export function setUpdateBroadcaster(fn: ((status: UpdateStatus) => void) | null
 /** Tests hand in their own fetch; the app uses Node's. */
 export function setUpdateFetch(fn: typeof fetch): void {
   fetchImpl = fn
+}
+
+/** Tests shorten the stall watchdog. */
+export function setDownloadStallMs(ms: number): void {
+  stallMs = ms
 }
 
 function feedUrl(): string {
@@ -224,7 +238,9 @@ async function publishedDigest(
   name: string,
   signal: AbortSignal
 ): Promise<string | null> {
-  const response = await fetchImpl(url, { signal })
+  const response = await fetchImpl(url, {
+    signal: AbortSignal.any([signal, AbortSignal.timeout(CHECKSUM_TIMEOUT_MS)])
+  })
   if (!response.ok) throw new Error(`the checksum file answered ${response.status}`)
   const text = await response.text()
   for (const line of text.split('\n')) {
@@ -283,6 +299,16 @@ export async function downloadUpdate(): Promise<UpdateStatus> {
   const asset = release.asset
   const abort = new AbortController()
   downloadAbort = abort
+  // The watchdog: reset on every chunk, fired when the link goes quiet.
+  let stalled = false
+  let watchdog: NodeJS.Timeout | null = null
+  const armWatchdog = (): void => {
+    if (watchdog) clearTimeout(watchdog)
+    watchdog = setTimeout(() => {
+      stalled = true
+      abort.abort()
+    }, stallMs)
+  }
   download = {
     version: release.version,
     phase: 'downloading',
@@ -304,13 +330,15 @@ export async function downloadUpdate(): Promise<UpdateStatus> {
     const declared = Number(response.headers.get('content-length') ?? 0)
     if (declared > 0 && download.total === 0) setDownload({ total: declared })
     const hash = createHash('sha256')
-    const out = createWriteStream(partPath)
+    const out = createWriteStream(partPath, { highWaterMark: WRITE_BUFFER_BYTES })
     const reader = response.body.getReader()
     let received = 0
     let lastPush = 0
+    armWatchdog()
     for (;;) {
       const { done, value } = await reader.read()
       if (done) break
+      armWatchdog()
       hash.update(value)
       received += value.length
       if (!out.write(value)) await new Promise<void>((r) => out.once('drain', r))
@@ -320,6 +348,7 @@ export async function downloadUpdate(): Promise<UpdateStatus> {
         setDownload({ received })
       }
     }
+    if (watchdog) clearTimeout(watchdog)
     await new Promise<void>((resolve, reject) => {
       out.on('error', reject)
       out.end(resolve)
@@ -345,15 +374,22 @@ export async function downloadUpdate(): Promise<UpdateStatus> {
     if (process.platform === 'darwin') void runTool('/usr/bin/open', ['-R', path]).catch(() => {})
   } catch (error) {
     rmSync(partPath, { force: true })
-    const cancelled = abort.signal.aborted
     const reason = error instanceof Error ? error.message : String(error)
+    const timedOut = error instanceof Error && error.name === 'TimeoutError'
     download = {
       ...download,
       phase: 'error',
-      error: cancelled ? 'Download cancelled.' : reason
+      error: stalled
+        ? `The download stalled: nothing arrived for ${Math.round(stallMs / 1000)} seconds.`
+        : abort.signal.aborted
+          ? 'Download cancelled.'
+          : timedOut
+            ? 'The checksum file took too long to answer.'
+            : reason
     }
     announce()
   } finally {
+    if (watchdog) clearTimeout(watchdog)
     downloadAbort = null
   }
   return updateStatus()

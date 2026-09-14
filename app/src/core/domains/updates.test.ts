@@ -331,6 +331,34 @@ describe('Update now', () => {
     expect(status.download?.error).toMatch(/stopped at 7 of 999/)
   })
 
+  it('gives up a transfer that goes quiet, and says so', async () => {
+    updates.setDownloadStallMs(300)
+    // A body that sends a few bytes and then never finishes, and — like a real
+    // fetch — fails its reader when the request's signal is aborted.
+    const stalledFetch: typeof fetch = async (url, init) => {
+      if (String(url).endsWith('/feed') || String(url).endsWith('/SHA256SUMS')) return fetch(url)
+      const signal = init?.signal
+      const body = new ReadableStream({
+        start(c) {
+          c.enqueue(new Uint8Array([1, 2, 3]))
+        },
+        pull: () =>
+          new Promise((_, reject) =>
+            signal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true })
+          )
+      })
+      return new Response(body, { status: 200, headers: { 'content-length': '999' } })
+    }
+    publish([{ name: 'Arcwel-WebDeck-0.2.0-arm64.dmg', body: Buffer.alloc(999, 1) }])
+    await updates.checkForUpdates()
+    updates.setUpdateFetch(stalledFetch)
+    const status = await updates.downloadUpdate()
+    expect(status.download?.phase).toBe('error')
+    expect(status.download?.error).toMatch(/stalled/)
+    expect(existsSync(join(home, 'Downloads', 'Arcwel-WebDeck-0.2.0-arm64.dmg.part'))).toBe(false)
+    updates.setDownloadStallMs(60_000)
+  })
+
   it('says so when the release has no build for this machine', async () => {
     publish([], ['source.tar.gz'])
     const checked = await updates.checkForUpdates()

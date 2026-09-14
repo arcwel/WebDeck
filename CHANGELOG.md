@@ -5,6 +5,14 @@ All notable changes to Arcwel WebDeck are recorded here. This project adheres to
 
 ## Unreleased
 
+### Fixed (a download that goes quiet is given up)
+
+- **Update now no longer sits at "Downloading…" for as long as a stalled
+  socket stays open.** A transfer that delivers nothing for sixty seconds is
+  given up and says so; the checksum fetch has a timeout of its own; the
+  archive is written through a larger buffer so a fast link is not paced by
+  thousands of small drains.
+
 ## v0.1.4 — 2026-09-14
 
 ### Fixed (macOS privacy strings)
