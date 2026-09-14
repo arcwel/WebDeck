@@ -5,6 +5,8 @@ All notable changes to Arcwel WebDeck are recorded here. This project adheres to
 
 ## Unreleased
 
+## v0.1.5 — 2026-09-14
+
 ### Fixed (a download that goes quiet is given up)
 
 - **Update now no longer sits at "Downloading…" for as long as a stalled
