@@ -302,6 +302,7 @@ The shell page owns the window and streams the stage rectangle to the browser; C
 | [Agent Workflows](docs/agent-workflows.md) · [Permission Modes](docs/permission-modes.md)                       | You are giving the agent work                                                             |
 | [Document Studio](docs/document-studio.md) · [Settings Sync](docs/settings-sync.md)                             | You want the rendered docs or the same setup on two machines                              |
 | [Local models](docs/local-llm-plan.md)                                                                          | Running the agent and Ask on a model on this Mac: what is built (Ollama), what is planned |
+| [Windows plan](docs/windows-plan.md)                                                                            | Shipping WebDeck on Windows 11: what carries over, what changes, in phases (a plan)       |
 | [Devices plan](docs/device-sync-plan.md)                                                                        | Tabs from your other devices, and sending things between them (a plan)                    |
 | [`PRD.md`](PRD.md) · [`ROADMAP.md`](ROADMAP.md)                                                                 | You want to know what it is for and where it is going                                     |
 | [`DESIGN.md`](DESIGN.md)                                                                                        | You are changing how the Deck looks or moves                                              |
