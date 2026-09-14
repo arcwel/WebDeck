@@ -1,3 +1,30 @@
+diff --git a/chrome/app/app-Info.plist b/chrome/app/app-Info.plist
+index 6fada0a2b1a1f..1479c9012cf18 100644
+--- a/chrome/app/app-Info.plist
++++ b/chrome/app/app-Info.plist
+@@ -721,6 +721,22 @@
+ 		<key>NSAllowsArbitraryLoads</key>
+ 		<true/>
+ 	</dict>
++	<key>NSBluetoothAlwaysUsageDescription</key>
++	<string>Arcwel WebDeck needs access to Bluetooth for websites you allow to use it.</string>
++	<key>NSBluetoothPeripheralUsageDescription</key>
++	<string>Arcwel WebDeck needs access to Bluetooth for websites you allow to use it.</string>
++	<key>NSCameraUsageDescription</key>
++	<string>Arcwel WebDeck needs access to the camera for websites you allow to use it.</string>
++	<key>NSMicrophoneUsageDescription</key>
++	<string>Arcwel WebDeck needs access to the microphone for websites you allow to use it.</string>
++	<key>NSLocationUsageDescription</key>
++	<string>Arcwel WebDeck needs access to your location for websites you allow to use it.</string>
++	<key>NSLocationWhenInUseUsageDescription</key>
++	<string>Arcwel WebDeck needs access to your location for websites you allow to use it.</string>
++	<key>NSLocalNetworkUsageDescription</key>
++	<string>Arcwel WebDeck looks for devices on your local network only when you choose to cast to one.</string>
++	<key>NSScreenCaptureUsageDescription</key>
++	<string>Arcwel WebDeck needs to record the screen for websites you allow to share it.</string>
+ 	<key>NSBonjourServices</key>
+ 	<array>
+ 		<string>_googlecast._tcp</string>
 diff --git a/chrome/app/chrome_command_ids.h b/chrome/app/chrome_command_ids.h
 index 65b9ce9bc44ce..6fa8db8dfafba 100644
 --- a/chrome/app/chrome_command_ids.h

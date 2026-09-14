@@ -287,6 +287,30 @@ if (helperApps.length === 0)
   fail('helper apps', 'no helper .app bundles — the renderer/GPU processes are missing')
 else ok('helper apps', `${helperApps.length} helpers`)
 
+// macOS kills a process outright — no dialog, no log line, an EXC_CRASH with
+// "Namespace TCC" — the first time it touches a privacy-gated service whose
+// usage string is missing from Info.plist. Upstream Chromium's template ships
+// none (Google adds them in its branded build), and a page asking about
+// Bluetooth availability was enough to take a whole session down. The strings
+// live in chrome/app/app-Info.plist in the fork's patch set; a bundle without
+// every one of them is not fit to package.
+const USAGE_STRINGS = [
+  'NSBluetoothAlwaysUsageDescription',
+  'NSCameraUsageDescription',
+  'NSMicrophoneUsageDescription',
+  'NSLocationUsageDescription',
+  'NSLocalNetworkUsageDescription'
+]
+const missingUsage = USAGE_STRINGS.filter((key) => !plist(infoPlist, key))
+if (missingUsage.length > 0) {
+  fail(
+    'privacy usage strings',
+    `Info.plist lacks ${missingUsage.join(', ')} — macOS terminates the app on first use of that service. Add them to chrome/app/app-Info.plist (fork patch set) and rebuild.`
+  )
+} else {
+  ok('privacy usage strings', `${USAGE_STRINGS.length} present`)
+}
+
 const crashpad = join(helpersDir, 'chrome_crashpad_handler')
 if (!existsSync(crashpad))
   warn('crash handler', 'chrome_crashpad_handler missing — crashes will not be captured')

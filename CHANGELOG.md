@@ -5,6 +5,19 @@ All notable changes to Arcwel WebDeck are recorded here. This project adheres to
 
 ## Unreleased
 
+### Fixed (macOS privacy strings)
+
+- **The app no longer dies the first time a page touches Bluetooth, the
+  camera, the microphone, location or the local network.** macOS terminates a
+  process outright — no dialog, no log line — when it reaches a privacy-gated
+  service whose usage string is missing from Info.plist, and the open-source
+  Chromium template ships none (Google adds them only in its branded build).
+  A page asking about Bluetooth availability took a whole session down. The
+  fork's Info.plist now carries the eight usage strings, each naming Arcwel
+  WebDeck and saying the service is only used for sites you allow, so macOS
+  asks instead of killing. The packager refuses to package a bundle missing
+  any of them.
+
 ## v0.1.3 — 2026-09-07
 
 ### Fixed (a verified update opens)
