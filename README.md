@@ -77,7 +77,7 @@ Four things follow from that ordering:
 ### A genuine IDE
 
 - Editor on **VS Code's service layer**: real `settings.json` and `keybindings.json`, themes, TextMate grammars, quick-access, breadcrumbs, outline, minimap.
-- **Extensions from Open VSX** run in the web extension host; each contributed view becomes a Deck block.
+- **Extensions from Open VSX** run in the web extension host; each contributed view becomes a Deck block, and their custom editors (hex, image and diagram editors, previews) open from **Open with…** in a stage tab or the Editor block.
 - **Language intelligence** over LSP: completion, go-to-definition, references, rename, hover, diagnostics, code actions. Servers ship inside the core for TypeScript and JavaScript (typescript-language-server), Python (pyright) and Rust (rust-analyzer); Go uses your `gopls`. Adding one is documented in [`app/docs/LANGUAGE_SUPPORT.md`](app/docs/LANGUAGE_SUPPORT.md).
 - **Debugging** picked by the file: js-debug for JavaScript and TypeScript, debugpy for Python, Delve for Go, lldb for Rust, C and C++ — breakpoints, stepping, call stack, variables, watch, source maps.
 - **Source control**: status, staged and unstaged diffs, stage, commit, branches.

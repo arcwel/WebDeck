@@ -50,7 +50,8 @@ const FALLBACK_SETTINGS: AppSettings = {
   askWhereToSave: false,
   searchEngine: 'duckduckgo',
   showAskButton: true,
-  profileImage: ''
+  profileImage: '',
+  customEditorsOpenIn: 'browser'
 }
 
 /**

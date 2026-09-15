@@ -7,6 +7,16 @@ All notable changes to Arcwel WebDeck are recorded here. This project adheres to
 
 ### Added
 
+- **Custom editors from extensions.** Hex, image and diagram editors,
+  previews — anything an installed extension contributes as a custom editor —
+  now have somewhere to render: VS Code's editor area, mounted either as a
+  full-width stage tab (the default) or as an _Extension editors_ tab in the
+  Editor block, by a setting in Settings → Application. _Open with…_ on a
+  file in the Files block lists the editors installed extensions offer for
+  it, and the stage tab has _Send to Deck_ to move over. VS Code has one
+  editor area, so all custom editors share the place chosen. The webview host
+  runs on the loopback origin beside the extension host, never on the
+  privileged page.
 - **`webdeck-core models` — the model choices as commands.** `list`, `use
 <id> --for agent|ask`, `pull`, `remove`, `test`, `recommend` and `endpoint
 add|remove`, against the same data directory the app uses, with `--json`

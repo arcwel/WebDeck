@@ -39,6 +39,11 @@ export interface AppSettings {
    *  rather than in Chromium's profile because Chromium only offers its own
    *  set of illustrations, and only a signed-in account brings a photo. */
   profileImage: string
+  /** Where custom editors from extensions (hex, image and diagram editors,
+   *  previews) open: a full-width stage tab, or a tab in the Editor block.
+   *  VS Code has one editor area, so every custom editor lives in the place
+   *  chosen here. */
+  customEditorsOpenIn: 'browser' | 'deck'
 }
 
 /** The search engines the address bar can use. `%s` is the query slot. */
@@ -718,6 +723,8 @@ export const IpcChannels = {
   shellBroadcast: 'shell:broadcast',
   fsList: 'fs:list',
   fsRead: 'fs:read',
+  fsReadBase64: 'fs:read-base64',
+  fsStat: 'fs:stat',
   fsWrite: 'fs:write',
   fsWriteBase64: 'fs:write-base64',
   fsCreate: 'fs:create',
@@ -1300,6 +1307,12 @@ export interface AgwebApi {
     list(rel: string): Promise<FsEntry[]>
     /** Write bytes the page already holds (a picked attachment), base64 on the wire. */
     writeBase64(rel: string, base64: string): Promise<{ error?: string }>
+    /** The file's bytes, for a viewer that needs them as they are (capped at 32 MB). */
+    readBase64(rel: string): Promise<{ base64?: string; bytes?: number; error?: string }>
+    stat(rel: string): Promise<{
+      stat?: { kind: 'file' | 'dir'; size: number; mtimeMs: number; ctimeMs: number }
+      error?: string
+    }>
     read(
       rel: string
     ): Promise<{ content?: string; error?: string; truncated?: boolean; bytes?: number }>

@@ -327,6 +327,10 @@ codelldb`): the release `.vsix` is downloaded, its sha256 checked against the
   socket transport. Launch shape for Rust: `{ type: 'lldb', request: 'launch',
 cargo: { args: ['build'] }, cwd }` — codelldb builds and picks the binary; for
   C: `program` is a binary beside the source with the same stem.
+- **Verified on this Mac (2026-09-14):** a clang-built C program through the
+  core's socket transport with VS Code's codelldb — breakpoint at line 4
+  verified and hit, stack `main` → `start`, locals read, `next` to line 5,
+  `continue` to `x=5` and exit 0.
 - **lldb-dap**, which Xcode ships (`xcrun --find lldb-dap`) and LLVM installs put
   on PATH: nothing vendored, DAP over stdio. Launch shape:
   `{ type: 'lldb-dap', request: 'launch', program, cwd }` where `program` is
@@ -345,7 +349,7 @@ cargo: { args: ['build'] }, cwd }` — codelldb builds and picks the binary; for
 | Python     | ✅ pyright (bundled)                                | ✅ debugpy (system interpreter, stdio transport)      |
 | Go         | 🟡 gopls (native binary; `go install`, scaffolded)  | 🟡 Delve (`fetch:dap` or on PATH; unverified on Go)   |
 | Rust       | 🟡 rust-analyzer (native binary; prebuilt vendored) | ✅ lldb-dap (Xcode) or codelldb (`fetch:dap`/VS Code) |
-| C / C++    | —                                                   | ✅ lldb-dap (Xcode) or codelldb                       |
+| C / C++    | —                                                   | ✅ codelldb or lldb-dap — verified live 2026-09-14    |
 
 🟡 for Go LSP: the **backend + vendoring are done** — gopls builds via
 `go install` (scaffolded when no Go toolchain). Rust LSP: rust-analyzer is a

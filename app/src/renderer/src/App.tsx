@@ -339,6 +339,9 @@ function ViewportChip(): React.JSX.Element | null {
   if (activeTab?.kind === 'doc') {
     label = (activeTab.docPath ?? '').split('/').pop() ?? 'document'
     state = 'reading'
+  } else if (activeTab?.kind === 'editors') {
+    label = 'extension editors'
+    state = 'editing'
   } else if (url) {
     try {
       label = new URL(url).host

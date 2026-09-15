@@ -343,6 +343,16 @@ origin, so the prerequisite is met rather than loosened:
 - **`vsx:read` is path-contained.** It resolves only inside that extension's
   own directory (`containedPath`, covered by `vsx.test.ts`) and caps file size,
   so it cannot become a file-read primitive for the renderer.
+- **Webviews are cross-origin too.** A custom editor is a webview, and its
+  host page (`pre/index.html`, its service worker and `fake.html`) is served
+  from the same loopback `/assets/*` route as the extension host, re-pointed
+  there by `registerWebviewHost` (vscode-editors.ts) rather than loaded from
+  `chrome://webdeck`. The iframe therefore carries no Mojo bindings and no
+  core token; extension content reaches it only through VS Code's own
+  webview protocol (the service worker answers resource fetches by asking
+  the workbench). One origin serves every webview, so webviews from
+  different extensions are not isolated from each other — the same trade a
+  self-hosted VS Code for the Web makes without per-webview subdomains.
 - **The loopback server's `/assets/*` is the one token-less route.** The
   capability token lives in the URL path and an origin cannot carry one, so
   the host assets cannot sit behind it. That is acceptable only because they

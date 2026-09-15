@@ -30,8 +30,10 @@ export type Theme = 'light' | 'dark'
 /** A browser tab in the tab strip. Page state lives in `browserStates`. */
 export interface BrowserTab {
   id: string
-  /** 'web' hosts a Chromium view; 'doc' renders a Document Studio view. */
-  kind: 'web' | 'doc'
+  /** 'web' hosts a Chromium view; 'doc' renders a Document Studio view;
+   *  'editors' hosts VS Code's editor area for extensions' custom editors —
+   *  one such tab at most, since VS Code has one editor area. */
+  kind: 'web' | 'doc' | 'editors'
   title: string
   /** For tabs opened from a link: the URL to load on first mount. */
   initialUrl?: string
@@ -148,6 +150,12 @@ let nextTabId = 1
 let nextTabGroupId = 1
 function makeTab(initialUrl?: string): BrowserTab {
   return { id: `tab-${nextTabId++}`, kind: 'web', title: 'New Tab', initialUrl, hasContent: false }
+}
+
+export const EDITORS_TAB_TITLE = 'Extension editors'
+
+function makeEditorsTab(): BrowserTab {
+  return { id: `tab-${nextTabId++}`, kind: 'editors', title: EDITORS_TAB_TITLE, hasContent: false }
 }
 
 function makeDocTab(docPath: string): BrowserTab {
@@ -445,7 +453,7 @@ interface TabSessionSnapshot {
   // `groupId` points at an entry in `groups` by its *saved* id; loadTabSession
   // remints both so restored ids never collide with a live counter.
   tabs: Array<{
-    kind: 'web' | 'doc'
+    kind: 'web' | 'doc' | 'editors'
     title: string
     url?: string
     docPath?: string
@@ -483,12 +491,14 @@ function serializeTabSession(state: {
     tabs: state.tabs.map((tab) =>
       tab.kind === 'doc'
         ? { kind: 'doc', title: tab.title, docPath: tab.docPath, groupId: tab.groupId }
-        : {
-            kind: 'web',
-            title: tab.title,
-            url: state.browserStates[tab.id]?.url ?? tab.initialUrl,
-            groupId: tab.groupId
-          }
+        : tab.kind === 'editors'
+          ? { kind: 'editors', title: tab.title, groupId: tab.groupId }
+          : {
+              kind: 'web',
+              title: tab.title,
+              url: state.browserStates[tab.id]?.url ?? tab.initialUrl,
+              groupId: tab.groupId
+            }
     ),
     activeIndex: Math.max(
       0,
@@ -503,6 +513,8 @@ function serializeTabSession(state: {
  *  so named snapshots reuse this exact re-minting path. */
 function isBlankSavedTab(tab: TabSessionSnapshot['tabs'][number]): boolean {
   if (tab.kind === 'doc') return false
+  // VS Code's editors do not survive a relaunch; the tab would come back empty.
+  if (tab.kind === 'editors') return true
   const url = (tab.url ?? '').trim()
   return url === '' || url === 'about:blank' || url === 'chrome://newtab/'
 }
@@ -708,6 +720,14 @@ interface ShellState {
   adoptBrowserTab(id: string, url?: string, title?: string): void
   /** Open (or focus) a Document Studio tab for a workspace file. */
   openDoc(path: string): void
+  /** Show the stage tab that hosts VS Code's editor area, creating it once. */
+  openEditorsTab(): void
+  /** Whether the Editor block shows its 'Extension editors' tab, and whether it is the active one. */
+  editorsInDeck: boolean
+  editorsTabActive: boolean
+  showEditorsInDeck(): void
+  setEditorsTabActive(active: boolean): void
+  closeEditorsInDeck(): void
   closeTab(id: string): void
   activateTab(id: string): void
   /** Drag-and-drop: move a tab before `beforeId` (or to the end when null). */
@@ -1330,6 +1350,25 @@ export const useShellStore = create<ShellState>((set) => ({
       return { tabs: [...state.tabs, tab], activeTabId: tab.id }
     }),
 
+  openEditorsTab: () =>
+    set((state) => {
+      const existing = state.tabs.find((t) => t.kind === 'editors')
+      if (existing) return { activeTabId: existing.id }
+      const tab = makeEditorsTab()
+      return { tabs: [...state.tabs, tab], activeTabId: tab.id }
+    }),
+
+  editorsInDeck: false,
+  editorsTabActive: false,
+  showEditorsInDeck: () =>
+    set((state) => ({
+      editorsInDeck: true,
+      editorsTabActive: true,
+      deckRevealed: state.deckMode === 'attached' ? true : state.deckRevealed
+    })),
+  setEditorsTabActive: (active) => set({ editorsTabActive: active }),
+  closeEditorsInDeck: () => set({ editorsInDeck: false, editorsTabActive: false }),
+
   closedTabs: [],
 
   reopenTab: () =>
@@ -1647,6 +1686,7 @@ export const useShellStore = create<ShellState>((set) => ({
     set((state) => ({
       editorTabs: state.editorTabs.includes(path) ? state.editorTabs : [...state.editorTabs, path],
       activeEditorPath: path,
+      editorsTabActive: false,
       pendingRevealLine: line ?? null,
       deckRevealed: state.deckMode === 'attached' ? true : state.deckRevealed
     })),

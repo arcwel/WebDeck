@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useShellStore } from '@/store'
 import { StartPage } from '@/components/StartPage'
 import { DocStudio } from '@/components/DocStudio'
+import { VscodeEditorsSurface } from '@/components/VscodeEditorsSurface'
 import { ReaderView } from '@/components/ReaderView'
 import { splitView } from '../../../webui/shell'
 
@@ -233,6 +234,8 @@ export function Stage(): React.JSX.Element {
       )}
       {activeTab?.kind === 'doc' && activeTab.docPath ? (
         <DocStudio key={activeTab.id} path={activeTab.docPath} />
+      ) : activeTab?.kind === 'editors' ? (
+        <VscodeEditorsSurface key={activeTab.id} />
       ) : (
         !hasContent && <StartPage />
       )}

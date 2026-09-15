@@ -205,6 +205,8 @@ export function createAgwebApi(ipcRenderer: IpcLike, host: HostCapabilities): Ag
     fs: {
       list: (rel) => ipcRenderer.invoke(IpcChannels.fsList, rel),
       writeBase64: (rel, base64) => ipcRenderer.invoke(IpcChannels.fsWriteBase64, rel, base64),
+      readBase64: (rel) => ipcRenderer.invoke(IpcChannels.fsReadBase64, rel),
+      stat: (rel) => ipcRenderer.invoke(IpcChannels.fsStat, rel),
       read: (rel) => ipcRenderer.invoke(IpcChannels.fsRead, rel),
       write: (rel, content) => ipcRenderer.invoke(IpcChannels.fsWrite, rel, content),
       create: (rel, kind) => ipcRenderer.invoke(IpcChannels.fsCreate, rel, kind),

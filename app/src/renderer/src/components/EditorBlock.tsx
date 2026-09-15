@@ -15,6 +15,7 @@ import { usePopover } from '@/popover'
 import { ensureLanguageClient } from '@/lsp'
 import { useMonacoReady } from '@/monaco-ready'
 import { useShellStore } from '@/store'
+import { mountEditorPart } from '@/vscode-editors'
 import { canFormat, formatModel } from '@/format'
 import { CloseIcon } from '@/components/icons'
 
@@ -33,6 +34,18 @@ export function EditorBlock(): React.JSX.Element {
   const theme = useShellStore((s) => s.theme)
   const openFile = useShellStore((s) => s.openFile)
   const closeEditorTab = useShellStore((s) => s.closeEditorTab)
+  // VS Code's editor area as one more tab, when the setting puts custom
+  // editors in the Deck (vscode-editors.ts). The Monaco surface stays mounted
+  // underneath and is hidden, so switching back costs nothing.
+  const editorsInDeck = useShellStore((s) => s.editorsInDeck)
+  const editorsTabActive = useShellStore((s) => s.editorsTabActive)
+  const setEditorsTabActive = useShellStore((s) => s.setEditorsTabActive)
+  const closeEditorsInDeck = useShellStore((s) => s.closeEditorsInDeck)
+  const partRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!editorsInDeck || !editorsTabActive || !partRef.current) return
+    return mountEditorPart(partRef.current)
+  }, [editorsInDeck, editorsTabActive])
   const breakpoints = useShellStore((s) => s.breakpoints)
   const [formatError, setFormatError] = useState<string | null>(null)
   // Cursor line and model URI drive the breadcrumb; both come from the editor
@@ -218,8 +231,32 @@ export function EditorBlock(): React.JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      {editorTabs.length > 0 && (
+      {(editorTabs.length > 0 || editorsInDeck) && (
         <div className="flex h-8 flex-none items-center gap-px overflow-x-auto border-b border-slate-200 px-1 dark:border-slate-800">
+          {editorsInDeck && (
+            <div
+              onClick={() => setEditorsTabActive(true)}
+              className={`group flex h-full cursor-pointer items-center gap-1.5 px-2.5 text-xs ${
+                editorsTabActive
+                  ? 'border-b-2 border-sky-500 text-slate-800 dark:text-slate-100'
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}
+              title="Custom editors from extensions"
+              data-testid="editor-tab-extension-editors"
+            >
+              <span>Extension editors</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  closeEditorsInDeck()
+                }}
+                className="rounded p-0.5 text-slate-400 opacity-0 hover:bg-slate-200 group-hover:opacity-100 dark:hover:bg-slate-700"
+                aria-label="Close Extension editors"
+              >
+                <CloseIcon size={10} />
+              </button>
+            </div>
+          )}
           {editorTabs.map((path) => {
             const name = path.split('/').pop() ?? path
             return (
@@ -227,7 +264,7 @@ export function EditorBlock(): React.JSX.Element {
                 key={path}
                 onClick={() => openFile(path)}
                 className={`group flex h-full cursor-pointer items-center gap-1.5 px-2.5 text-xs ${
-                  path === activePath
+                  path === activePath && !editorsTabActive
                     ? 'border-b-2 border-sky-500 text-slate-800 dark:text-slate-100'
                     : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
@@ -291,8 +328,15 @@ export function EditorBlock(): React.JSX.Element {
         />
       )}
       <div className="relative min-h-0 flex-1">
-        <div ref={containerRef} className="absolute inset-0" />
-        {!activePath && (
+        <div ref={containerRef} className="absolute inset-0" hidden={editorsTabActive} />
+        {editorsInDeck && editorsTabActive && (
+          <div
+            ref={partRef}
+            className="monaco-workbench absolute inset-0"
+            data-testid="editors-part-deck"
+          />
+        )}
+        {!activePath && !editorsTabActive && (
           <div className="absolute inset-0 flex items-center justify-center bg-white text-sm text-slate-500 dark:bg-[#0e1420]">
             Select a file in Files to start editing.
           </div>

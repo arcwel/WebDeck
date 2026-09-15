@@ -7,7 +7,7 @@ import {
   type TabGroup,
   type TabGroupColor
 } from '@/store'
-import { CloseIcon, DocIcon, GlobeIcon } from '@/components/icons'
+import { BlockTypeIcon, CloseIcon, DocIcon, GlobeIcon } from '@/components/icons'
 import { usePopover } from '@/popover'
 import { AnchoredPopover } from '@/components/AnchoredPopover'
 
@@ -301,6 +301,12 @@ function TabItem({
       )}
       {tab.kind === 'doc' ? (
         <DocIcon
+          size={13}
+          className={`shrink-0 ${active ? 'text-[var(--wd-accent)]' : 'text-[var(--wd-dim)]'}`}
+        />
+      ) : tab.kind === 'editors' ? (
+        <BlockTypeIcon
+          type="editor"
           size={13}
           className={`shrink-0 ${active ? 'text-[var(--wd-accent)]' : 'text-[var(--wd-dim)]'}`}
         />

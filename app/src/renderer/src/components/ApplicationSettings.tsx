@@ -165,6 +165,30 @@ export function ApplicationSettings(): React.JSX.Element {
         </div>
       </Section>
 
+      <Section title="Editor">
+        <div className="flex items-center gap-2 px-2 py-1">
+          <span className="min-w-0 flex-1 text-[12px] text-[var(--wd-text)]">
+            Custom editors from extensions open in
+            <span className="block text-[11px] text-[var(--wd-dim)]">
+              Hex, image and diagram editors, previews. Text files always open in the Editor block.
+              VS Code has one editor area, so all custom editors share the place chosen here.
+            </span>
+          </span>
+          <select
+            value={settings.customEditorsOpenIn}
+            onChange={(e) =>
+              void update('customEditorsOpenIn', e.target.value as 'browser' | 'deck')
+            }
+            className="flex-none rounded-md border border-[var(--wd-glass-border)] bg-[var(--wd-field)] px-2 py-1 text-[11px] outline-none focus:border-[var(--wd-accent)]"
+            aria-label="Custom editors open in"
+            data-testid="custom-editors-open-in"
+          >
+            <option value="browser">A browser tab</option>
+            <option value="deck">The Editor block</option>
+          </select>
+        </div>
+      </Section>
+
       <Section title="Profile picture">
         <ProfilePicture settings={settings} onChange={setSettings} />
       </Section>

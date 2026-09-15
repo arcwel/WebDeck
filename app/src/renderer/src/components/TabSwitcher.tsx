@@ -48,9 +48,11 @@ export function TabSwitcher({ open, onClose }: TabSwitcherProps): React.JSX.Elem
         url:
           tab.kind === 'doc'
             ? (tab.docPath ?? '')
-            : (browserStates[tab.id]?.url ?? tab.initialUrl ?? ''),
+            : tab.kind === 'editors'
+              ? ''
+              : (browserStates[tab.id]?.url ?? tab.initialUrl ?? ''),
         favicon: tab.favicon,
-        isDoc: tab.kind === 'doc'
+        isDoc: tab.kind !== 'web'
       })),
     [tabs, browserStates]
   )

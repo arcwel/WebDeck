@@ -39,6 +39,7 @@ export interface AppSettings {
   searchEngine: string
   showAskButton: boolean
   profileImage: string
+  customEditorsOpenIn: 'browser' | 'deck'
 }
 
 const DEFAULTS: AppSettings = {
@@ -52,7 +53,8 @@ const DEFAULTS: AppSettings = {
   askWhereToSave: false,
   searchEngine: 'duckduckgo',
   showAskButton: true,
-  profileImage: ''
+  profileImage: '',
+  customEditorsOpenIn: 'browser'
 }
 
 function file(): string {
@@ -97,6 +99,9 @@ export function sanitizePatch(patch: Partial<AppSettings>): Partial<AppSettings>
   if (typeof patch.downloadPath === 'string') clean.downloadPath = patch.downloadPath
   if (bool(patch.askWhereToSave)) clean.askWhereToSave = patch.askWhereToSave
   if (typeof patch.searchEngine === 'string') clean.searchEngine = patch.searchEngine
+  if (patch.customEditorsOpenIn === 'browser' || patch.customEditorsOpenIn === 'deck') {
+    clean.customEditorsOpenIn = patch.customEditorsOpenIn
+  }
   if (bool(patch.showAskButton)) clean.showAskButton = patch.showAskButton
   // A square PNG data URL and nothing else. The cap is what keeps a settings
   // file that is read on every boot from carrying a megapixel photo.

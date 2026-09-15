@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FsEntry, RecentProject, WorkspaceInfo } from '@shared/ipc'
 import { isDocFile, isSlidesFile, useShellStore } from '@/store'
 import { BlockTypeIcon, CloseIcon } from '@/components/icons'
+import { OpenWithButton } from '@/components/OpenWithButton'
 import { SLIDE_TEMPLATES } from '@/slideTemplates'
 import { useVirtualRows } from '@/virtual'
 
@@ -260,6 +261,7 @@ function WorkspaceTree(): React.JSX.Element {
         </span>
         <span className="truncate text-slate-700 dark:text-slate-300">{entry.name}</span>
         <span className="ml-auto hidden shrink-0 items-center gap-1 group-hover:flex">
+          {entry.kind === 'file' && <OpenWithButton path={path} name={entry.name} />}
           <button
             onClick={(e) => {
               e.stopPropagation()

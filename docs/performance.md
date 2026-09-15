@@ -96,6 +96,37 @@ The harness now bounds each `footprint` call (3 s) and falls back to RSS with a
 note (`--rss` forces it), so a blocked machine produces a report instead of a
 hang; the JSON carries `memory.basis`.
 
+## Re-run — 2026-09-14, v0.1.6 with custom editors, footprint basis
+
+Same machine, same harness, once process inspection worked again.
+
+| Metric                       | 2026-09-01 baseline            | 2026-09-14                   |
+| ---------------------------- | ------------------------------ | ---------------------------- |
+| Startup → CDP / shell / core | 250–340 / 260–345 / 290–375 ms | 424 / 459 / 652 ms (one run) |
+| Settled footprint            | **520–545 MB** (10 processes)  | **1,121 MB** (12 processes)  |
+| … renderers                  | 158–160 (the shell)            | 470                          |
+| … GPU process                | 216–238                        | 441                          |
+| … webdeck-core               | 28                             | 85                           |
+| … browser process            | 74                             | 79                           |
+| Per tab, own renderer        | ≈ 30 MB                        | ≈ 25 MB                      |
+| 3 mock agents → core delta   | +0.1 MB                        | 0                            |
+| Standalone core, ready / RSS | 33–38 ms / 60 MB               | 1,351 ms (cold) / 62 MB      |
+
+Reading: the per-tab cost and the agents are unchanged, and nothing grows
+per tab in WebDeck's own processes. The settled footprint has doubled since
+the baseline, in three places, and that is the next performance job:
+
+1. **Renderers, +310 MB.** Two more processes at settle: the extension
+   host's iframe on the loopback origin is its own site-isolated renderer,
+   carrying the worker host and every installed extension's code, and the
+   shell renderer itself has grown with the view layer, the editor part and
+   the webview host. Measure with no extensions installed to split the two.
+2. **GPU process, +210 MB.** More compositing surfaces: the still behind
+   menus, the editor part, the loopback iframes. Profile the layer tree.
+3. **webdeck-core, +57 MB.** The model registry, the Apple helper probe, the
+   update checker and the debug adapters all load at boot; lazy-loading the
+   providers until a runtime is asked for is the obvious cut.
+
 ## Follow-ups (not blockers)
 
 - Profile the GPU process's compositing layers under the glass theme (4).

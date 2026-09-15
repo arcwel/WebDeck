@@ -145,6 +145,56 @@ export async function writeFile(
  * `.webdeck/attachments/`, which a fresh project does not have, and the path
  * is already confined to the workspace by resolveInWorkspace.
  */
+/** Bytes, base64 on the wire, for a viewer that needs the file as it is. */
+const BINARY_READ_BYTES = 32 * 1024 * 1024
+
+export async function readBinaryFile(
+  rel: string,
+  root?: string | null
+): Promise<{ base64?: string; bytes?: number; error?: string }> {
+  const full = resolveInWorkspace(rel, root)
+  if (!full) return { error: 'no workspace' }
+  try {
+    const stat = await fsp.stat(full)
+    if (!stat.isFile()) return { error: 'not a file' }
+    if (stat.size > BINARY_READ_BYTES) {
+      return { error: `larger than ${BINARY_READ_BYTES / (1024 * 1024)} MB`, bytes: stat.size }
+    }
+    return { base64: (await fsp.readFile(full)).toString('base64'), bytes: stat.size }
+  } catch (error) {
+    return { error: message(error) }
+  }
+}
+
+export interface FsStat {
+  kind: 'file' | 'dir'
+  size: number
+  mtimeMs: number
+  ctimeMs: number
+}
+
+export async function statEntry(
+  rel: string,
+  root?: string | null
+): Promise<{ stat?: FsStat; error?: string }> {
+  const full = resolveInWorkspace(rel, root)
+  if (!full) return { error: 'no workspace' }
+  try {
+    const stat = await fsp.stat(full)
+    if (!stat.isFile() && !stat.isDirectory()) return { error: 'not a file or directory' }
+    return {
+      stat: {
+        kind: stat.isDirectory() ? 'dir' : 'file',
+        size: stat.size,
+        mtimeMs: stat.mtimeMs,
+        ctimeMs: stat.ctimeMs
+      }
+    }
+  } catch (error) {
+    return { error: message(error) }
+  }
+}
+
 export async function writeBinaryFile(
   rel: string,
   data: Buffer,
@@ -250,6 +300,8 @@ export function watchWorkspace(root: string | null): void {
 export function registerFsRpc(): void {
   core.register(IpcChannels.fsList, (rel) => listDir(asString(rel) ?? ''))
   core.register(IpcChannels.fsRead, (rel) => readFile(asString(rel) ?? ''))
+  core.register(IpcChannels.fsReadBase64, (rel) => readBinaryFile(asString(rel) ?? ''))
+  core.register(IpcChannels.fsStat, (rel) => statEntry(asString(rel) ?? ''))
   core.register(IpcChannels.fsWrite, (rel, content) => {
     const r = asString(rel)
     if (r === null || typeof content !== 'string') return { error: 'bad arguments' }

@@ -23,6 +23,8 @@ import * as monaco from 'monaco-editor'
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import TextMateWorker from '@codingame/monaco-vscode-textmate-service-override/worker?worker'
 import { initialize as initializeVscodeServices } from '@codingame/monaco-vscode-api'
+import { registerWebviewHost } from '@/vscode-editors'
+import { registerWorkspaceFileSystem } from '@/workspace-fs-provider'
 import getConfigurationServiceOverride, {
   updateUserConfiguration
 } from '@codingame/monaco-vscode-configuration-service-override'
@@ -149,6 +151,14 @@ export const monacoReady: Promise<void> = extensionHostOrigin()
       // webview panels get the same registerAssets-style redirect as the
       // extension host when they land (step 6).
       ...getViewsServiceOverride(openEditorFallback)
+    }).then(() => {
+      // Webview host files on the loopback origin, beside the extension host's
+      // (vscode-editors.ts). Without the origin there is no host and custom
+      // editors stay off, like extension code.
+      if (extHostOrigin) registerWebviewHost(extHostOrigin)
+      // The workspace's files, for everything that reads through VS Code's
+      // file service rather than WebDeck's blocks (workspace-fs-provider.ts).
+      registerWorkspaceFileSystem()
     })
   )
   .then(() =>
