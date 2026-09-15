@@ -104,6 +104,17 @@ export function setDownloadStallMs(ms: number): void {
   stallMs = ms
 }
 
+/** Which build a release offers this machine: the running platform, or what a test says. */
+let updatePlatform: { platform: string; arch: string } = {
+  platform: process.platform,
+  arch: process.arch
+}
+
+/** Tests pin the platform, so the fixtures mean the same on every CI runner. */
+export function setUpdatePlatform(platform: { platform: string; arch: string } | null): void {
+  updatePlatform = platform ?? { platform: process.platform, arch: process.arch }
+}
+
 function feedUrl(): string {
   return process.env.WEBDECK_UPDATE_FEED || DEFAULT_FEED
 }
@@ -180,7 +191,7 @@ function toListed(raw: unknown): ListedRelease | null {
       publishedAt: typeof r.published_at === 'string' ? r.published_at : '',
       notes: notes.length > NOTES_CAP ? `${notes.slice(0, NOTES_CAP)}…` : notes,
       prerelease: r.prerelease === true,
-      asset: pickAsset(assets, process.platform, process.arch),
+      asset: pickAsset(assets, updatePlatform.platform, updatePlatform.arch),
       signed: false,
       unsignedReason: manifest
         ? 'manifest not checked'

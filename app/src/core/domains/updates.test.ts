@@ -87,8 +87,12 @@ describe('the checker', () => {
     broadcasts.length = 0
     process.env.WEBDECK_VERSION = '0.1.0'
     updates.setUpdateBroadcaster((s) => broadcasts.push(s))
+    // The fixtures name Apple Silicon builds; on a Linux CI runner the pick
+    // would find nothing and every download test would fail for the wrong reason.
+    updates.setUpdatePlatform({ platform: 'darwin', arch: 'arm64' })
   })
   afterEach(() => {
+    updates.setUpdatePlatform(null)
     updates.setUpdateBroadcaster(null)
     updates.stopUpdateChecks()
     delete process.env.WEBDECK_VERSION
