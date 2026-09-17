@@ -24,4 +24,5 @@ These live at the repository root and go deeper than the user guides:
 - [`DESIGN.md`](../DESIGN.md) — the Dev Deck's design spec and motion
 - [`IDE_FOUNDATION.md`](../IDE_FOUNDATION.md) — why the IDE runs on VS Code's services
 - [`SECURITY.md`](../SECURITY.md) — trust boundaries, the agent's limits, residual risks
+- [`SETTINGS_ARCHITECTURE.md`](../SETTINGS_ARCHITECTURE.md) — which settings are Chromium's and which are WebDeck's, and the menu each is reached from
 - [`CHROMIUM_MIGRATION.md`](../CHROMIUM_MIGRATION.md) — the move to an upstream Chromium fork

@@ -35,7 +35,12 @@ interface ShellRemote {
   openWindow(url: string): Promise<{ windowId: number }>
   focusWindow(windowId: number): void
   closeWindow(windowId: number): void
+  // The shell page reloaded by the browser; script cannot do it from a WebUI page.
+  reloadShell(): void
   pickPaths(mode: number): Promise<{ paths: string[] }>
+  // The native image panel, answering with the picked image's bytes as a
+  // data: URL. A chrome:// page cannot open a file chooser of its own.
+  pickImage(): Promise<{ dataUrl: string }>
   createTab(url: string): Promise<{ tabId: number }>
   selectTab(tabId: number): void
   closeTab(tabId: number): void
@@ -76,7 +81,7 @@ interface ShellRemote {
   setZoom(tabId: number, level: number): Promise<{ applied: number }>
   print(tabId: number): void
   openDevTools(tabId: number): void
-  // Browser-level preferences (see BrowserSettings.tsx). Mojo getters resolve to
+  // Browser-level preferences (see BrowsingControls.tsx). Mojo getters resolve to
   // an object of the response fields; setters are fire-and-forget (void).
   getBlockThirdPartyCookies(): Promise<{ blocked: boolean }>
   setBlockThirdPartyCookies(blocked: boolean): void
@@ -568,6 +573,7 @@ export const SHELL_BROWSER: Record<string, (...args: unknown[]) => Promise<unkno
   // The native open panel, which reports real paths (Shell.PickPaths). Only a
   // privileged shell page may learn where a file lives; the core then opens the
   // project / reads the attachment by that path, exactly as Electron's did.
+  [IpcChannels.dialogPickImage]: async () => (await getShell()).pickImage().then((r) => r.dataUrl),
   [IpcChannels.dialogPickPaths]: async (mode) => {
     const code = mode === 'dir' ? 1 : mode === 'image' ? 2 : 0
     const { paths } = await (await getShell()).pickPaths(code)
@@ -588,6 +594,9 @@ export const SHELL_BROWSER: Record<string, (...args: unknown[]) => Promise<unkno
   },
   [IpcChannels.deckFocus]: async () => {
     if (deckWindowId) (await getShell()).focusWindow(deckWindowId)
+  },
+  [IpcChannels.shellReload]: async () => {
+    ;(await getShell()).reloadShell()
   },
   [IpcChannels.floatSync]: async (groupIds) => {
     const wanted = new Set(Array.isArray(groupIds) ? groupIds.map(String) : [])

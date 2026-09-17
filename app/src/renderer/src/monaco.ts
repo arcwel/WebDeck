@@ -24,6 +24,7 @@ import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import TextMateWorker from '@codingame/monaco-vscode-textmate-service-override/worker?worker'
 import { initialize as initializeVscodeServices } from '@codingame/monaco-vscode-api'
 import { registerWebviewHost } from '@/vscode-editors'
+import { shouldStartExtensionHost } from '@/extension-host-policy'
 import { registerWorkspaceFileSystem } from '@/workspace-fs-provider'
 import getConfigurationServiceOverride, {
   updateUserConfiguration
@@ -128,15 +129,39 @@ function agwebInstalled(): Promise<typeof window.agweb> {
   })
 }
 
+/** Whether this session started the worker extension host. Fixed at boot. */
+export let extensionHostStarted = false
+
+/**
+ * The host is a renderer of its own (~70 MB), so it starts only when an
+ * installed extension has code for it (extension-host-policy.ts); the first
+ * install of one asks for a reload. Read before the services initialise,
+ * since the choice cannot change afterwards.
+ */
+async function decideExtensionHost(extHostOrigin: string | null): Promise<boolean> {
+  if (!extHostOrigin) return false
+  try {
+    const installed = await (await agwebInstalled()).vsx.list()
+    return shouldStartExtensionHost(true, installed)
+  } catch {
+    return false
+  }
+}
+
 export const monacoReady: Promise<void> = extensionHostOrigin()
+  .then(async (extHostOrigin) => {
+    extensionHostStarted = await decideExtensionHost(extHostOrigin)
+    return extHostOrigin
+  })
   .then((extHostOrigin) =>
     initializeVscodeServices({
       // Third-party extension code runs in VS Code's web-worker host, inside an
       // iframe on the loopback origin — never in chrome://webdeck, the page that
       // holds the core token (task 12.8, SECURITY.md). If that origin cannot be
       // provided the worker host stays OFF and only declarative extensions
-      // (themes, grammars, snippets, keymaps) load.
-      ...getExtensionsServiceOverride({ enableWorkerExtensionHost: extHostOrigin !== null }),
+      // (themes, grammars, snippets, keymaps) load; and it stays off until an
+      // installed extension needs it (extension-host-policy.ts).
+      ...getExtensionsServiceOverride({ enableWorkerExtensionHost: extensionHostStarted }),
       ...getFilesServiceOverride(),
       ...getConfigurationServiceOverride(),
       ...getKeybindingsServiceOverride(),

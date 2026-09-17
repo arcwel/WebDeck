@@ -116,7 +116,7 @@ export async function runMenuCommand(command: string): Promise<void> {
       store.toggleDeck()
       return
 
-    // 'preferences' is the app menu's Settings item (IDC_OPTIONS), forwarded
+    // 'preferences' is the File menu's Settings item (IDC_OPTIONS), forwarded
     // by the browser so it opens this one sheet rather than a chrome:// tab.
     case 'app:preferences':
     case 'app:settings':

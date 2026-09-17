@@ -26,11 +26,17 @@ export function BookmarkControls({
   tabId,
   url,
   title,
-  align = 'right'
+  align = 'right',
+  showStar = true,
+  showList = true
 }: {
   tabId: string
   url: string
   title: string
+  /** The star. Hidden from the customize panel; ⌘D is Chromium's own. */
+  showStar?: boolean
+  /** The list button. */
+  showList?: boolean
   /** Which edge the bookmarks list drops from — left when the star leads the bar. */
   align?: 'left' | 'right'
 }): React.JSX.Element {
@@ -58,26 +64,30 @@ export function BookmarkControls({
 
   return (
     <div ref={ref} className="relative flex items-center gap-1">
-      <button
-        className={button}
-        disabled={!url}
-        onClick={() => (saved ? removeBookmark(url) : addBookmark(url, title))}
-        aria-label={saved ? 'Remove bookmark' : 'Bookmark this page'}
-        title={saved ? 'Remove bookmark' : 'Bookmark this page'}
-        data-testid="bookmark-toggle"
-      >
-        {saved ? <StarFilledIcon size={16} className="text-amber-400" /> : <StarIcon size={16} />}
-      </button>
+      {showStar && (
+        <button
+          className={button}
+          disabled={!url}
+          onClick={() => (saved ? removeBookmark(url) : addBookmark(url, title))}
+          aria-label={saved ? 'Remove bookmark' : 'Bookmark this page'}
+          title={saved ? 'Remove bookmark' : 'Bookmark this page'}
+          data-testid="bookmark-toggle"
+        >
+          {saved ? <StarFilledIcon size={16} className="text-amber-400" /> : <StarIcon size={16} />}
+        </button>
+      )}
 
-      <button
-        className={button}
-        onClick={() => setOpen(!open)}
-        aria-label="Bookmarks"
-        title="Bookmarks"
-        data-testid="bookmarks-menu"
-      >
-        <BookmarksIcon size={16} />
-      </button>
+      {showList && (
+        <button
+          className={button}
+          onClick={() => setOpen(!open)}
+          aria-label="Bookmarks"
+          title="Bookmarks"
+          data-testid="bookmarks-menu"
+        >
+          <BookmarksIcon size={16} />
+        </button>
+      )}
 
       {open && (
         <div
@@ -144,7 +154,15 @@ export function BookmarkControls({
 }
 
 /** Find in page (⌘F), with Chromium's own match counts. */
-export function FindBar({ tabId }: { tabId: string }): React.JSX.Element {
+export function FindBar({
+  tabId,
+  showButton = true
+}: {
+  tabId: string
+  /** Hiding the button must not take ⌘F with it: the component stays mounted
+   *  (it owns that shortcut) and simply draws nothing until the bar opens. */
+  showButton?: boolean
+}): React.JSX.Element | null {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [result, setResult] = useState<{ matches: number; active: number } | null>(null)
@@ -178,6 +196,7 @@ export function FindBar({ tabId }: { tabId: string }): React.JSX.Element {
   }
 
   if (!open) {
+    if (!showButton) return null
     return (
       <button
         className={button}

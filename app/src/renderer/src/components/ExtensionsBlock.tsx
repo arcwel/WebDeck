@@ -8,6 +8,8 @@ import {
   unregisterInstalled,
   type ExtensionActivation
 } from '@/editor-extensions'
+import { extensionHostStarted } from '@/monaco'
+import { needsExtensionHost } from '@/extension-host-policy'
 
 /**
  * Editor extensions from Open VSX (task 12.8): search the registry, install
@@ -36,6 +38,7 @@ function isWebCapable(ext: VsxInstalled): boolean {
 function activationLabel(ext: VsxInstalled, a: ExtensionActivation | undefined): string {
   const manifest = ext.manifest as { browser?: unknown }
   if (!manifest.browser) return 'declarative — nothing to run'
+  if (!extensionHostStarted) return 'runs after a reload'
   if (!a) return 'host status pending'
   if (a.errors.length) return 'activation failed'
   if (a.activateMs !== undefined) return `activated in ${Math.round(a.activateMs)} ms`
@@ -124,7 +127,13 @@ export function ExtensionsBlock(): React.JSX.Element {
       try {
         const record = await window.agweb.vsx.install(id)
         await registerInstalled(record)
-        setStatus({ kind: 'ok', text: `Installed ${record.displayName} ${record.version}` })
+        setStatus({
+          kind: 'ok',
+          text:
+            needsExtensionHost(record) && !extensionHostStarted
+              ? `Installed ${record.displayName} ${record.version}. Its code runs in the extension host, which starts with the next reload.`
+              : `Installed ${record.displayName} ${record.version}`
+        })
         await refresh()
       } catch (err) {
         setStatus({ kind: 'error', text: `Install failed: ${(err as Error).message}` })
@@ -190,6 +199,23 @@ export function ExtensionsBlock(): React.JSX.Element {
           }`}
         >
           {status.text}
+        </div>
+      )}
+      {!extensionHostStarted && installed.some(needsExtensionHost) && (
+        <div
+          className="flex flex-none items-center gap-2 border-b border-amber-200 px-2 py-1 text-[11px] text-amber-700 dark:border-amber-900 dark:text-amber-300"
+          data-testid="ext-host-reload"
+        >
+          <span className="min-w-0 flex-1">
+            An installed extension has code to run; the extension host starts with a reload.
+          </span>
+          <button
+            type="button"
+            onClick={() => void window.agweb.windows.reload()}
+            className="flex-none rounded-md border border-amber-300 px-2 py-0.5 font-semibold dark:border-amber-700"
+          >
+            Reload
+          </button>
         </div>
       )}
 

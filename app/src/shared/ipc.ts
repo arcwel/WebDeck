@@ -39,6 +39,9 @@ export interface AppSettings {
    *  rather than in Chromium's profile because Chromium only offers its own
    *  set of illustrations, and only a signed-in account brings a photo. */
   profileImage: string
+  /** Toolbar buttons the user hid (ids from `TOOLBAR_BUTTONS`). Hidden ones
+   *  stay reachable in the ⋮ menu, so nothing becomes unreachable. */
+  toolbarHidden: string[]
   /** Where custom editors from extensions (hex, image and diagram editors,
    *  previews) open: a full-width stage tab, or a tab in the Editor block.
    *  VS Code has one editor area, so every custom editor lives in the place
@@ -673,7 +676,7 @@ export const IpcChannels = {
   browserGetPageText: 'browser:get-page-text',
   // Browser-level Chromium preferences, reached over the Mojo Shell because a
   // shell draws the toolbar, so it has no native controls for them. Fork-only;
-  // see BrowserSettings.tsx
+  // see BrowsingControls.tsx
   // and BROWSER_PREFS_PLAN.md.
   browserGetCookieBlock: 'browser:get-cookie-block',
   browserSetCookieBlock: 'browser:set-cookie-block',
@@ -719,6 +722,7 @@ export const IpcChannels = {
   deckOpen: 'deck:open',
   deckClose: 'deck:close',
   deckFocus: 'deck:focus',
+  shellReload: 'shell:reload',
   floatSync: 'float:sync',
   shellBroadcast: 'shell:broadcast',
   fsList: 'fs:list',
@@ -732,6 +736,7 @@ export const IpcChannels = {
   fsDelete: 'fs:delete',
   dialogConfirm: 'dialog:confirm',
   dialogPickPaths: 'dialog:pick-paths',
+  dialogPickImage: 'dialog:pick-image',
   termCreate: 'term:create',
   termInput: 'term:input',
   termResize: 'term:resize',
@@ -1285,6 +1290,9 @@ export interface AgwebApi {
     openDeck(): Promise<void>
     closeDeck(): Promise<void>
     focusDeck(): Promise<void>
+    /** Reload the shell page. Script cannot reload a WebUI page itself; the
+     *  browser does it. Used once, when the first extension with code lands. */
+    reload(): Promise<void>
     /** Reconcile float windows to exactly these floating group ids. */
     syncFloats(groupIds: string[]): Promise<void>
     /** A deck or float window booted: ask the main window to broadcast its state. */
@@ -1329,6 +1337,11 @@ export interface AgwebApi {
   /** Native picker for composer attachments. Returns workspace-relative paths;
    *  anything chosen outside the workspace is dropped. */
   pickPaths(mode: 'file' | 'dir' | 'image'): Promise<string[]>
+
+  /** The native image panel, answering with the chosen image as a data: URL
+   *  ('' when cancelled). A `chrome://` page cannot open a file chooser, so
+   *  the browser picks and reads; no path reaches the page. */
+  pickImage(): Promise<string>
 
   /** Project-wide text search (ripgrep when available, Node fallback). */
   search(query: string): Promise<SearchHit[]>

@@ -5,8 +5,47 @@ All notable changes to Arcwel WebDeck are recorded here. This project adheres to
 
 ## Unreleased
 
+### Changed
+
+- **Settings in the browser is Chromium's own settings page.** The Settings
+  item in the browser menu, and "All settings…" in the profile menu, open
+  `chrome://settings` — the real page. WebDeck used to redraw that page from
+  the prefs behind it, which could only ever be a subset and went stale the
+  moment upstream added a row. WebDeck's own settings moved to **File →
+  Settings…** (out of the app menu, where macOS puts preferences — Command-comma
+  follows it), and the four controls Chromium has no equivalent of moved with
+  them: the toolbar WebDeck draws, its ad blocker, the default-browser check,
+  and Clear browsing data.
+
+- **The home button follows its setting.** WebDeck draws its own toolbar, so
+  Chromium's `browser.show_home_button` moved nothing: the pref was written
+  and the button stayed. The toolbar reads it now. The neighbouring "Show
+  bookmarks bar" row is gone — this build has no Chromium bookmarks bar for
+  it to show, and the Favourites bar it replaces is a toolbar button, which
+  is customizable.
+- **The extension host starts only when something needs it.** VS Code's
+  web-worker extension host is a renderer of its own, about 70 MB resident,
+  and it started at every launch whether or not any installed extension had
+  code for it. It now starts only when one does; themes, keymaps, grammars
+  and snippets never needed it and still load at once. Installing the first
+  extension with code shows _Reload_ in the Extensions block, once; the
+  browser reloads the shell page for it, since a WebUI page cannot reload
+  itself from script (a new `ReloadShell` on the shell interface).
+
 ### Added
 
+- **Customize the toolbar.** Right-click the toolbar (or Settings →
+  Application → Browsing) to choose which action buttons sit beside the
+  address bar:
+  Reader mode, the bookmark star, Bookmarks, Zoom, Favourites bar, Split
+  view, Picture-in-Picture, Extensions and Find. Navigation, the address bar,
+  the menu, the profile button and the Deck toggle stay put, so the toolbar
+  cannot be emptied. Hiding Find keeps ⌘F; hiding Zoom keeps ⌘+ and ⌘−.
+- **Choose a profile picture.** The button did nothing: a `chrome://` page is
+  not offered a file chooser, so `<input type=file>` opened no panel and said
+  nothing either. The browser now runs the panel and hands back the image
+  (`Shell.PickImage`); the page still crops and scales it. No path reaches
+  the page, and the file is size-capped.
 - **Custom editors from extensions.** Hex, image and diagram editors,
   previews — anything an installed extension contributes as a custom editor —
   now have somewhere to render: VS Code's editor area, mounted either as a

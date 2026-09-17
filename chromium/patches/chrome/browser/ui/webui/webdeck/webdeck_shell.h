@@ -67,6 +67,7 @@ class WebDeckShell : public mojom::Shell,
   void CloseTab(int32_t tab_id) override;
   void Navigate(int32_t tab_id, const std::string& url) override;
   void Reload(int32_t tab_id) override;
+  void ReloadShell() override;
   void GoBack(int32_t tab_id) override;
   void GoForward(int32_t tab_id) override;
   void Stop(int32_t tab_id) override;
@@ -119,6 +120,7 @@ class WebDeckShell : public mojom::Shell,
   void FocusWindow(int32_t window_id) override;
   void CloseWindow(int32_t window_id) override;
   void PickPaths(int32_t mode, PickPathsCallback callback) override;
+  void PickImage(PickImageCallback callback) override;
   void OpenLocalFile(int32_t tab_id, OpenLocalFileCallback callback) override;
 
   // Files were dropped on this shell's window, on the tab strip or on a page
@@ -208,10 +210,13 @@ class WebDeckShell : public mojom::Shell,
   // One picked file, routed to the viewer that suits it; and the reply once a
   // document has been copied into the staging area off the UI thread.
   void OpenPickedFile(const base::FilePath& path);
+  // Read a picked image off the UI thread and answer PickImage with it.
+  void ReplyWithPickedImage(const base::FilePath& path);
 
   OpenLocalFileCallback open_local_file_callback_;
   int32_t open_local_file_tab_ = 0;
   PickPathsCallback pick_paths_callback_;
+  PickImageCallback pick_image_callback_;
   // The window this registered a command forwarder with, so the destructor
   // clears exactly that registration.
   raw_ptr<BrowserWindowInterface> forwarding_window_ = nullptr;

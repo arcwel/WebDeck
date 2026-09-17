@@ -38,6 +38,9 @@ const HOST_OWNED: Record<string, string> = {
   'browser:back': 'Chromium owns navigation',
   'browser:forward': 'Chromium owns navigation',
   'browser:reload': 'Chromium owns navigation',
+  'dialog:pick-image':
+    'Chromium owns the file panel; a chrome:// page cannot open one, so the browser picks and reads',
+  'shell:reload': 'Chromium owns the shell page; a WebUI page cannot reload itself from script',
   'browser:stop': 'Chromium owns navigation',
   'browser:set-bounds': 'Electron-only view geometry; the fork uses real tabs',
   'browser:set-visible': 'Electron-only view geometry; the fork uses real tabs',

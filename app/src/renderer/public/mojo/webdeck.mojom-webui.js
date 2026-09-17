@@ -465,9 +465,18 @@ var ShellRemote = class {
       false
     );
   }
-  goBack(tabId) {
+  reloadShell() {
     this.proxy.sendMessage(
       1595636669,
+      Shell_ReloadShell_ParamsSpec.$,
+      null,
+      [],
+      false
+    );
+  }
+  goBack(tabId) {
+    this.proxy.sendMessage(
+      479597812,
       Shell_GoBack_ParamsSpec.$,
       null,
       [
@@ -478,7 +487,7 @@ var ShellRemote = class {
   }
   goForward(tabId) {
     this.proxy.sendMessage(
-      479597812,
+      2106477657,
       Shell_GoForward_ParamsSpec.$,
       null,
       [
@@ -489,7 +498,7 @@ var ShellRemote = class {
   }
   stop(tabId) {
     this.proxy.sendMessage(
-      2106477657,
+      1320450855,
       Shell_Stop_ParamsSpec.$,
       null,
       [
@@ -500,7 +509,7 @@ var ShellRemote = class {
   }
   setStageCornerRadius(radius) {
     this.proxy.sendMessage(
-      1320450855,
+      631760253,
       Shell_SetStageCornerRadius_ParamsSpec.$,
       null,
       [
@@ -511,7 +520,7 @@ var ShellRemote = class {
   }
   find(tabId, query, forward) {
     this.proxy.sendMessage(
-      631760253,
+      511445982,
       Shell_Find_ParamsSpec.$,
       null,
       [
@@ -524,7 +533,7 @@ var ShellRemote = class {
   }
   stopFind(tabId) {
     this.proxy.sendMessage(
-      511445982,
+      252080144,
       Shell_StopFind_ParamsSpec.$,
       null,
       [
@@ -535,7 +544,7 @@ var ShellRemote = class {
   }
   setZoom(tabId, level) {
     return this.proxy.sendMessage(
-      252080144,
+      713335880,
       Shell_SetZoom_ParamsSpec.$,
       Shell_SetZoom_ResponseParamsSpec.$,
       [
@@ -547,7 +556,7 @@ var ShellRemote = class {
   }
   print(tabId) {
     this.proxy.sendMessage(
-      713335880,
+      216270657,
       Shell_Print_ParamsSpec.$,
       null,
       [
@@ -558,7 +567,7 @@ var ShellRemote = class {
   }
   openDevTools(tabId) {
     this.proxy.sendMessage(
-      216270657,
+      494096774,
       Shell_OpenDevTools_ParamsSpec.$,
       null,
       [
@@ -569,7 +578,7 @@ var ShellRemote = class {
   }
   togglePictureInPicture(tabId) {
     this.proxy.sendMessage(
-      494096774,
+      790647368,
       Shell_TogglePictureInPicture_ParamsSpec.$,
       null,
       [
@@ -580,7 +589,7 @@ var ShellRemote = class {
   }
   getPageText(tabId) {
     return this.proxy.sendMessage(
-      790647368,
+      1813493965,
       Shell_GetPageText_ParamsSpec.$,
       Shell_GetPageText_ResponseParamsSpec.$,
       [
@@ -591,7 +600,7 @@ var ShellRemote = class {
   }
   getBlockThirdPartyCookies() {
     return this.proxy.sendMessage(
-      1813493965,
+      1427666857,
       Shell_GetBlockThirdPartyCookies_ParamsSpec.$,
       Shell_GetBlockThirdPartyCookies_ResponseParamsSpec.$,
       [],
@@ -600,7 +609,7 @@ var ShellRemote = class {
   }
   setBlockThirdPartyCookies(blocked) {
     this.proxy.sendMessage(
-      1427666857,
+      278838813,
       Shell_SetBlockThirdPartyCookies_ParamsSpec.$,
       null,
       [
@@ -611,7 +620,7 @@ var ShellRemote = class {
   }
   getSendDoNotTrack() {
     return this.proxy.sendMessage(
-      278838813,
+      285803864,
       Shell_GetSendDoNotTrack_ParamsSpec.$,
       Shell_GetSendDoNotTrack_ResponseParamsSpec.$,
       [],
@@ -620,7 +629,7 @@ var ShellRemote = class {
   }
   setSendDoNotTrack(enabled) {
     this.proxy.sendMessage(
-      285803864,
+      2102454249,
       Shell_SetSendDoNotTrack_ParamsSpec.$,
       null,
       [
@@ -631,7 +640,7 @@ var ShellRemote = class {
   }
   getHttpsOnlyMode() {
     return this.proxy.sendMessage(
-      2102454249,
+      836490945,
       Shell_GetHttpsOnlyMode_ParamsSpec.$,
       Shell_GetHttpsOnlyMode_ResponseParamsSpec.$,
       [],
@@ -640,7 +649,7 @@ var ShellRemote = class {
   }
   setHttpsOnlyMode(enabled) {
     this.proxy.sendMessage(
-      836490945,
+      1673103613,
       Shell_SetHttpsOnlyMode_ParamsSpec.$,
       null,
       [
@@ -651,7 +660,7 @@ var ShellRemote = class {
   }
   getPreloadPages() {
     return this.proxy.sendMessage(
-      1673103613,
+      1374262588,
       Shell_GetPreloadPages_ParamsSpec.$,
       Shell_GetPreloadPages_ResponseParamsSpec.$,
       [],
@@ -660,7 +669,7 @@ var ShellRemote = class {
   }
   setPreloadPages(enabled) {
     this.proxy.sendMessage(
-      1374262588,
+      723369275,
       Shell_SetPreloadPages_ParamsSpec.$,
       null,
       [
@@ -671,7 +680,7 @@ var ShellRemote = class {
   }
   getAdblockEnabled() {
     return this.proxy.sendMessage(
-      723369275,
+      32241856,
       Shell_GetAdblockEnabled_ParamsSpec.$,
       Shell_GetAdblockEnabled_ResponseParamsSpec.$,
       [],
@@ -680,7 +689,7 @@ var ShellRemote = class {
   }
   setAdblockEnabled(enabled) {
     this.proxy.sendMessage(
-      32241856,
+      821112473,
       Shell_SetAdblockEnabled_ParamsSpec.$,
       null,
       [
@@ -691,7 +700,7 @@ var ShellRemote = class {
   }
   getAdblockBlockedCount() {
     return this.proxy.sendMessage(
-      821112473,
+      73501288,
       Shell_GetAdblockBlockedCount_ParamsSpec.$,
       Shell_GetAdblockBlockedCount_ResponseParamsSpec.$,
       [],
@@ -700,7 +709,7 @@ var ShellRemote = class {
   }
   clearBrowsingData(cookies, cache, history, timeRange) {
     return this.proxy.sendMessage(
-      73501288,
+      1839527027,
       Shell_ClearBrowsingData_ParamsSpec.$,
       Shell_ClearBrowsingData_ResponseParamsSpec.$,
       [
@@ -714,7 +723,7 @@ var ShellRemote = class {
   }
   getDefaultBrowserState() {
     return this.proxy.sendMessage(
-      1839527027,
+      1142821493,
       Shell_GetDefaultBrowserState_ParamsSpec.$,
       Shell_GetDefaultBrowserState_ResponseParamsSpec.$,
       [],
@@ -723,7 +732,7 @@ var ShellRemote = class {
   }
   setAsDefaultBrowser() {
     return this.proxy.sendMessage(
-      1142821493,
+      1150953122,
       Shell_SetAsDefaultBrowser_ParamsSpec.$,
       Shell_SetAsDefaultBrowser_ResponseParamsSpec.$,
       [],
@@ -732,7 +741,7 @@ var ShellRemote = class {
   }
   getExtensionActions(tabId) {
     return this.proxy.sendMessage(
-      1150953122,
+      980272239,
       Shell_GetExtensionActions_ParamsSpec.$,
       Shell_GetExtensionActions_ResponseParamsSpec.$,
       [
@@ -743,7 +752,7 @@ var ShellRemote = class {
   }
   runExtensionAction(tabId, extensionId) {
     return this.proxy.sendMessage(
-      980272239,
+      1113325693,
       Shell_RunExtensionAction_ParamsSpec.$,
       Shell_RunExtensionAction_ResponseParamsSpec.$,
       [
@@ -755,7 +764,7 @@ var ShellRemote = class {
   }
   getSettingPrefs(names) {
     return this.proxy.sendMessage(
-      1113325693,
+      1612867135,
       Shell_GetSettingPrefs_ParamsSpec.$,
       Shell_GetSettingPrefs_ResponseParamsSpec.$,
       [
@@ -766,7 +775,7 @@ var ShellRemote = class {
   }
   setSettingPref(name, jsonValue) {
     return this.proxy.sendMessage(
-      1612867135,
+      2034579838,
       Shell_SetSettingPref_ParamsSpec.$,
       Shell_SetSettingPref_ResponseParamsSpec.$,
       [
@@ -778,7 +787,7 @@ var ShellRemote = class {
   }
   getAccountInfo() {
     return this.proxy.sendMessage(
-      2034579838,
+      115845584,
       Shell_GetAccountInfo_ParamsSpec.$,
       Shell_GetAccountInfo_ResponseParamsSpec.$,
       [],
@@ -787,7 +796,7 @@ var ShellRemote = class {
   }
   setClient(client) {
     this.proxy.sendMessage(
-      115845584,
+      1393567653,
       Shell_SetClient_ParamsSpec.$,
       null,
       [
@@ -798,7 +807,7 @@ var ShellRemote = class {
   }
   setStageVisible(visible) {
     this.proxy.sendMessage(
-      1393567653,
+      1025856066,
       Shell_SetStageVisible_ParamsSpec.$,
       null,
       [
@@ -809,7 +818,7 @@ var ShellRemote = class {
   }
   captureStage(tabId) {
     return this.proxy.sendMessage(
-      1025856066,
+      97704177,
       Shell_CaptureStage_ParamsSpec.$,
       Shell_CaptureStage_ResponseParamsSpec.$,
       [
@@ -820,7 +829,7 @@ var ShellRemote = class {
   }
   openWindow(url) {
     return this.proxy.sendMessage(
-      97704177,
+      1509102986,
       Shell_OpenWindow_ParamsSpec.$,
       Shell_OpenWindow_ResponseParamsSpec.$,
       [
@@ -831,7 +840,7 @@ var ShellRemote = class {
   }
   focusWindow(windowId) {
     this.proxy.sendMessage(
-      1509102986,
+      1820560745,
       Shell_FocusWindow_ParamsSpec.$,
       null,
       [
@@ -842,7 +851,7 @@ var ShellRemote = class {
   }
   closeWindow(windowId) {
     this.proxy.sendMessage(
-      1820560745,
+      991120878,
       Shell_CloseWindow_ParamsSpec.$,
       null,
       [
@@ -853,7 +862,7 @@ var ShellRemote = class {
   }
   pickPaths(mode) {
     return this.proxy.sendMessage(
-      991120878,
+      870934368,
       Shell_PickPaths_ParamsSpec.$,
       Shell_PickPaths_ResponseParamsSpec.$,
       [
@@ -862,9 +871,18 @@ var ShellRemote = class {
       false
     );
   }
+  pickImage() {
+    return this.proxy.sendMessage(
+      184233421,
+      Shell_PickImage_ParamsSpec.$,
+      Shell_PickImage_ResponseParamsSpec.$,
+      [],
+      false
+    );
+  }
   openLocalFile(tabId) {
     return this.proxy.sendMessage(
-      870934368,
+      1001832075,
       Shell_OpenLocalFile_ParamsSpec.$,
       Shell_OpenLocalFile_ResponseParamsSpec.$,
       [
@@ -941,265 +959,279 @@ var ShellReceiver = class {
     );
     this.helper_internal_.registerHandler(
       1595636669,
+      Shell_ReloadShell_ParamsSpec.$,
+      null,
+      impl.reloadShell.bind(impl),
+      false
+    );
+    this.helper_internal_.registerHandler(
+      479597812,
       Shell_GoBack_ParamsSpec.$,
       null,
       impl.goBack.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      479597812,
+      2106477657,
       Shell_GoForward_ParamsSpec.$,
       null,
       impl.goForward.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      2106477657,
+      1320450855,
       Shell_Stop_ParamsSpec.$,
       null,
       impl.stop.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      1320450855,
+      631760253,
       Shell_SetStageCornerRadius_ParamsSpec.$,
       null,
       impl.setStageCornerRadius.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      631760253,
+      511445982,
       Shell_Find_ParamsSpec.$,
       null,
       impl.find.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      511445982,
+      252080144,
       Shell_StopFind_ParamsSpec.$,
       null,
       impl.stopFind.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      252080144,
+      713335880,
       Shell_SetZoom_ParamsSpec.$,
       Shell_SetZoom_ResponseParamsSpec.$,
       impl.setZoom.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      713335880,
+      216270657,
       Shell_Print_ParamsSpec.$,
       null,
       impl.print.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      216270657,
+      494096774,
       Shell_OpenDevTools_ParamsSpec.$,
       null,
       impl.openDevTools.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      494096774,
+      790647368,
       Shell_TogglePictureInPicture_ParamsSpec.$,
       null,
       impl.togglePictureInPicture.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      790647368,
+      1813493965,
       Shell_GetPageText_ParamsSpec.$,
       Shell_GetPageText_ResponseParamsSpec.$,
       impl.getPageText.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      1813493965,
+      1427666857,
       Shell_GetBlockThirdPartyCookies_ParamsSpec.$,
       Shell_GetBlockThirdPartyCookies_ResponseParamsSpec.$,
       impl.getBlockThirdPartyCookies.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      1427666857,
+      278838813,
       Shell_SetBlockThirdPartyCookies_ParamsSpec.$,
       null,
       impl.setBlockThirdPartyCookies.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      278838813,
+      285803864,
       Shell_GetSendDoNotTrack_ParamsSpec.$,
       Shell_GetSendDoNotTrack_ResponseParamsSpec.$,
       impl.getSendDoNotTrack.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      285803864,
+      2102454249,
       Shell_SetSendDoNotTrack_ParamsSpec.$,
       null,
       impl.setSendDoNotTrack.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      2102454249,
+      836490945,
       Shell_GetHttpsOnlyMode_ParamsSpec.$,
       Shell_GetHttpsOnlyMode_ResponseParamsSpec.$,
       impl.getHttpsOnlyMode.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      836490945,
+      1673103613,
       Shell_SetHttpsOnlyMode_ParamsSpec.$,
       null,
       impl.setHttpsOnlyMode.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      1673103613,
+      1374262588,
       Shell_GetPreloadPages_ParamsSpec.$,
       Shell_GetPreloadPages_ResponseParamsSpec.$,
       impl.getPreloadPages.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      1374262588,
+      723369275,
       Shell_SetPreloadPages_ParamsSpec.$,
       null,
       impl.setPreloadPages.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      723369275,
+      32241856,
       Shell_GetAdblockEnabled_ParamsSpec.$,
       Shell_GetAdblockEnabled_ResponseParamsSpec.$,
       impl.getAdblockEnabled.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      32241856,
+      821112473,
       Shell_SetAdblockEnabled_ParamsSpec.$,
       null,
       impl.setAdblockEnabled.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      821112473,
+      73501288,
       Shell_GetAdblockBlockedCount_ParamsSpec.$,
       Shell_GetAdblockBlockedCount_ResponseParamsSpec.$,
       impl.getAdblockBlockedCount.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      73501288,
+      1839527027,
       Shell_ClearBrowsingData_ParamsSpec.$,
       Shell_ClearBrowsingData_ResponseParamsSpec.$,
       impl.clearBrowsingData.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      1839527027,
+      1142821493,
       Shell_GetDefaultBrowserState_ParamsSpec.$,
       Shell_GetDefaultBrowserState_ResponseParamsSpec.$,
       impl.getDefaultBrowserState.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      1142821493,
+      1150953122,
       Shell_SetAsDefaultBrowser_ParamsSpec.$,
       Shell_SetAsDefaultBrowser_ResponseParamsSpec.$,
       impl.setAsDefaultBrowser.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      1150953122,
+      980272239,
       Shell_GetExtensionActions_ParamsSpec.$,
       Shell_GetExtensionActions_ResponseParamsSpec.$,
       impl.getExtensionActions.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      980272239,
+      1113325693,
       Shell_RunExtensionAction_ParamsSpec.$,
       Shell_RunExtensionAction_ResponseParamsSpec.$,
       impl.runExtensionAction.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      1113325693,
+      1612867135,
       Shell_GetSettingPrefs_ParamsSpec.$,
       Shell_GetSettingPrefs_ResponseParamsSpec.$,
       impl.getSettingPrefs.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      1612867135,
+      2034579838,
       Shell_SetSettingPref_ParamsSpec.$,
       Shell_SetSettingPref_ResponseParamsSpec.$,
       impl.setSettingPref.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      2034579838,
+      115845584,
       Shell_GetAccountInfo_ParamsSpec.$,
       Shell_GetAccountInfo_ResponseParamsSpec.$,
       impl.getAccountInfo.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      115845584,
+      1393567653,
       Shell_SetClient_ParamsSpec.$,
       null,
       impl.setClient.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      1393567653,
+      1025856066,
       Shell_SetStageVisible_ParamsSpec.$,
       null,
       impl.setStageVisible.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      1025856066,
+      97704177,
       Shell_CaptureStage_ParamsSpec.$,
       Shell_CaptureStage_ResponseParamsSpec.$,
       impl.captureStage.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      97704177,
+      1509102986,
       Shell_OpenWindow_ParamsSpec.$,
       Shell_OpenWindow_ResponseParamsSpec.$,
       impl.openWindow.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      1509102986,
+      1820560745,
       Shell_FocusWindow_ParamsSpec.$,
       null,
       impl.focusWindow.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      1820560745,
+      991120878,
       Shell_CloseWindow_ParamsSpec.$,
       null,
       impl.closeWindow.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      991120878,
+      870934368,
       Shell_PickPaths_ParamsSpec.$,
       Shell_PickPaths_ResponseParamsSpec.$,
       impl.pickPaths.bind(impl),
       false
     );
     this.helper_internal_.registerHandler(
-      870934368,
+      184233421,
+      Shell_PickImage_ParamsSpec.$,
+      Shell_PickImage_ResponseParamsSpec.$,
+      impl.pickImage.bind(impl),
+      false
+    );
+    this.helper_internal_.registerHandler(
+      1001832075,
       Shell_OpenLocalFile_ParamsSpec.$,
       Shell_OpenLocalFile_ResponseParamsSpec.$,
       impl.openLocalFile.bind(impl),
@@ -1235,6 +1267,7 @@ var ShellCallbackRouter = class {
   closeTab;
   navigate;
   reload;
+  reloadShell;
   goBack;
   goForward;
   stop;
@@ -1272,6 +1305,7 @@ var ShellCallbackRouter = class {
   focusWindow;
   closeWindow;
   pickPaths;
+  pickImage;
   openLocalFile;
   onConnectionError;
   constructor() {
@@ -1384,11 +1418,24 @@ var ShellCallbackRouter = class {
       ),
       false
     );
-    this.goBack = new mojo.internal.interfaceSupport.InterfaceCallbackReceiver(
+    this.reloadShell = new mojo.internal.interfaceSupport.InterfaceCallbackReceiver(
       this.router_
     );
     this.helper_internal_.registerHandler(
       1595636669,
+      Shell_ReloadShell_ParamsSpec.$,
+      null,
+      this.reloadShell.createReceiverHandler(
+        false
+        /* expectsResponse */
+      ),
+      false
+    );
+    this.goBack = new mojo.internal.interfaceSupport.InterfaceCallbackReceiver(
+      this.router_
+    );
+    this.helper_internal_.registerHandler(
+      479597812,
       Shell_GoBack_ParamsSpec.$,
       null,
       this.goBack.createReceiverHandler(
@@ -1401,7 +1448,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      479597812,
+      2106477657,
       Shell_GoForward_ParamsSpec.$,
       null,
       this.goForward.createReceiverHandler(
@@ -1414,7 +1461,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      2106477657,
+      1320450855,
       Shell_Stop_ParamsSpec.$,
       null,
       this.stop.createReceiverHandler(
@@ -1427,7 +1474,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      1320450855,
+      631760253,
       Shell_SetStageCornerRadius_ParamsSpec.$,
       null,
       this.setStageCornerRadius.createReceiverHandler(
@@ -1440,7 +1487,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      631760253,
+      511445982,
       Shell_Find_ParamsSpec.$,
       null,
       this.find.createReceiverHandler(
@@ -1453,7 +1500,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      511445982,
+      252080144,
       Shell_StopFind_ParamsSpec.$,
       null,
       this.stopFind.createReceiverHandler(
@@ -1466,7 +1513,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      252080144,
+      713335880,
       Shell_SetZoom_ParamsSpec.$,
       Shell_SetZoom_ResponseParamsSpec.$,
       this.setZoom.createReceiverHandler(
@@ -1479,7 +1526,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      713335880,
+      216270657,
       Shell_Print_ParamsSpec.$,
       null,
       this.print.createReceiverHandler(
@@ -1492,7 +1539,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      216270657,
+      494096774,
       Shell_OpenDevTools_ParamsSpec.$,
       null,
       this.openDevTools.createReceiverHandler(
@@ -1505,7 +1552,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      494096774,
+      790647368,
       Shell_TogglePictureInPicture_ParamsSpec.$,
       null,
       this.togglePictureInPicture.createReceiverHandler(
@@ -1518,7 +1565,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      790647368,
+      1813493965,
       Shell_GetPageText_ParamsSpec.$,
       Shell_GetPageText_ResponseParamsSpec.$,
       this.getPageText.createReceiverHandler(
@@ -1531,7 +1578,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      1813493965,
+      1427666857,
       Shell_GetBlockThirdPartyCookies_ParamsSpec.$,
       Shell_GetBlockThirdPartyCookies_ResponseParamsSpec.$,
       this.getBlockThirdPartyCookies.createReceiverHandler(
@@ -1544,7 +1591,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      1427666857,
+      278838813,
       Shell_SetBlockThirdPartyCookies_ParamsSpec.$,
       null,
       this.setBlockThirdPartyCookies.createReceiverHandler(
@@ -1557,7 +1604,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      278838813,
+      285803864,
       Shell_GetSendDoNotTrack_ParamsSpec.$,
       Shell_GetSendDoNotTrack_ResponseParamsSpec.$,
       this.getSendDoNotTrack.createReceiverHandler(
@@ -1570,7 +1617,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      285803864,
+      2102454249,
       Shell_SetSendDoNotTrack_ParamsSpec.$,
       null,
       this.setSendDoNotTrack.createReceiverHandler(
@@ -1583,7 +1630,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      2102454249,
+      836490945,
       Shell_GetHttpsOnlyMode_ParamsSpec.$,
       Shell_GetHttpsOnlyMode_ResponseParamsSpec.$,
       this.getHttpsOnlyMode.createReceiverHandler(
@@ -1596,7 +1643,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      836490945,
+      1673103613,
       Shell_SetHttpsOnlyMode_ParamsSpec.$,
       null,
       this.setHttpsOnlyMode.createReceiverHandler(
@@ -1609,7 +1656,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      1673103613,
+      1374262588,
       Shell_GetPreloadPages_ParamsSpec.$,
       Shell_GetPreloadPages_ResponseParamsSpec.$,
       this.getPreloadPages.createReceiverHandler(
@@ -1622,7 +1669,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      1374262588,
+      723369275,
       Shell_SetPreloadPages_ParamsSpec.$,
       null,
       this.setPreloadPages.createReceiverHandler(
@@ -1635,7 +1682,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      723369275,
+      32241856,
       Shell_GetAdblockEnabled_ParamsSpec.$,
       Shell_GetAdblockEnabled_ResponseParamsSpec.$,
       this.getAdblockEnabled.createReceiverHandler(
@@ -1648,7 +1695,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      32241856,
+      821112473,
       Shell_SetAdblockEnabled_ParamsSpec.$,
       null,
       this.setAdblockEnabled.createReceiverHandler(
@@ -1661,7 +1708,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      821112473,
+      73501288,
       Shell_GetAdblockBlockedCount_ParamsSpec.$,
       Shell_GetAdblockBlockedCount_ResponseParamsSpec.$,
       this.getAdblockBlockedCount.createReceiverHandler(
@@ -1674,7 +1721,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      73501288,
+      1839527027,
       Shell_ClearBrowsingData_ParamsSpec.$,
       Shell_ClearBrowsingData_ResponseParamsSpec.$,
       this.clearBrowsingData.createReceiverHandler(
@@ -1687,7 +1734,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      1839527027,
+      1142821493,
       Shell_GetDefaultBrowserState_ParamsSpec.$,
       Shell_GetDefaultBrowserState_ResponseParamsSpec.$,
       this.getDefaultBrowserState.createReceiverHandler(
@@ -1700,7 +1747,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      1142821493,
+      1150953122,
       Shell_SetAsDefaultBrowser_ParamsSpec.$,
       Shell_SetAsDefaultBrowser_ResponseParamsSpec.$,
       this.setAsDefaultBrowser.createReceiverHandler(
@@ -1713,7 +1760,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      1150953122,
+      980272239,
       Shell_GetExtensionActions_ParamsSpec.$,
       Shell_GetExtensionActions_ResponseParamsSpec.$,
       this.getExtensionActions.createReceiverHandler(
@@ -1726,7 +1773,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      980272239,
+      1113325693,
       Shell_RunExtensionAction_ParamsSpec.$,
       Shell_RunExtensionAction_ResponseParamsSpec.$,
       this.runExtensionAction.createReceiverHandler(
@@ -1739,7 +1786,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      1113325693,
+      1612867135,
       Shell_GetSettingPrefs_ParamsSpec.$,
       Shell_GetSettingPrefs_ResponseParamsSpec.$,
       this.getSettingPrefs.createReceiverHandler(
@@ -1752,7 +1799,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      1612867135,
+      2034579838,
       Shell_SetSettingPref_ParamsSpec.$,
       Shell_SetSettingPref_ResponseParamsSpec.$,
       this.setSettingPref.createReceiverHandler(
@@ -1765,7 +1812,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      2034579838,
+      115845584,
       Shell_GetAccountInfo_ParamsSpec.$,
       Shell_GetAccountInfo_ResponseParamsSpec.$,
       this.getAccountInfo.createReceiverHandler(
@@ -1778,7 +1825,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      115845584,
+      1393567653,
       Shell_SetClient_ParamsSpec.$,
       null,
       this.setClient.createReceiverHandler(
@@ -1791,7 +1838,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      1393567653,
+      1025856066,
       Shell_SetStageVisible_ParamsSpec.$,
       null,
       this.setStageVisible.createReceiverHandler(
@@ -1804,7 +1851,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      1025856066,
+      97704177,
       Shell_CaptureStage_ParamsSpec.$,
       Shell_CaptureStage_ResponseParamsSpec.$,
       this.captureStage.createReceiverHandler(
@@ -1817,7 +1864,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      97704177,
+      1509102986,
       Shell_OpenWindow_ParamsSpec.$,
       Shell_OpenWindow_ResponseParamsSpec.$,
       this.openWindow.createReceiverHandler(
@@ -1830,7 +1877,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      1509102986,
+      1820560745,
       Shell_FocusWindow_ParamsSpec.$,
       null,
       this.focusWindow.createReceiverHandler(
@@ -1843,7 +1890,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      1820560745,
+      991120878,
       Shell_CloseWindow_ParamsSpec.$,
       null,
       this.closeWindow.createReceiverHandler(
@@ -1856,10 +1903,23 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      991120878,
+      870934368,
       Shell_PickPaths_ParamsSpec.$,
       Shell_PickPaths_ResponseParamsSpec.$,
       this.pickPaths.createReceiverHandler(
+        true
+        /* expectsResponse */
+      ),
+      false
+    );
+    this.pickImage = new mojo.internal.interfaceSupport.InterfaceCallbackReceiver(
+      this.router_
+    );
+    this.helper_internal_.registerHandler(
+      184233421,
+      Shell_PickImage_ParamsSpec.$,
+      Shell_PickImage_ResponseParamsSpec.$,
+      this.pickImage.createReceiverHandler(
         true
         /* expectsResponse */
       ),
@@ -1869,7 +1929,7 @@ var ShellCallbackRouter = class {
       this.router_
     );
     this.helper_internal_.registerHandler(
-      870934368,
+      1001832075,
       Shell_OpenLocalFile_ParamsSpec.$,
       Shell_OpenLocalFile_ResponseParamsSpec.$,
       this.openLocalFile.createReceiverHandler(
@@ -2181,6 +2241,7 @@ var Shell_SelectTab_ParamsSpec = { $: {} };
 var Shell_CloseTab_ParamsSpec = { $: {} };
 var Shell_Navigate_ParamsSpec = { $: {} };
 var Shell_Reload_ParamsSpec = { $: {} };
+var Shell_ReloadShell_ParamsSpec = { $: {} };
 var Shell_GoBack_ParamsSpec = { $: {} };
 var Shell_GoForward_ParamsSpec = { $: {} };
 var Shell_Stop_ParamsSpec = { $: {} };
@@ -2237,6 +2298,8 @@ var Shell_FocusWindow_ParamsSpec = { $: {} };
 var Shell_CloseWindow_ParamsSpec = { $: {} };
 var Shell_PickPaths_ParamsSpec = { $: {} };
 var Shell_PickPaths_ResponseParamsSpec = { $: {} };
+var Shell_PickImage_ParamsSpec = { $: {} };
+var Shell_PickImage_ResponseParamsSpec = { $: {} };
 var Shell_OpenLocalFile_ParamsSpec = { $: {} };
 var Shell_OpenLocalFile_ResponseParamsSpec = { $: {} };
 var ShellClient_OnDocumentsDropped_ParamsSpec = { $: {} };
@@ -2983,6 +3046,12 @@ mojo.internal.Struct(
     )
   ],
   [[0, 16]]
+);
+mojo.internal.Struct(
+  Shell_ReloadShell_ParamsSpec.$,
+  "Shell_ReloadShell_Params",
+  [],
+  [[0, 8]]
 );
 mojo.internal.Struct(
   Shell_GoBack_ParamsSpec.$,
@@ -3961,6 +4030,30 @@ mojo.internal.Struct(
   [[0, 16]]
 );
 mojo.internal.Struct(
+  Shell_PickImage_ParamsSpec.$,
+  "Shell_PickImage_Params",
+  [],
+  [[0, 8]]
+);
+mojo.internal.Struct(
+  Shell_PickImage_ResponseParamsSpec.$,
+  "Shell_PickImage_ResponseParams",
+  [
+    mojo.internal.StructField(
+      "dataUrl",
+      0,
+      0,
+      mojo.internal.String,
+      null,
+      false,
+      0,
+      void 0,
+      void 0
+    )
+  ],
+  [[0, 16]]
+);
+mojo.internal.Struct(
   Shell_OpenLocalFile_ParamsSpec.$,
   "Shell_OpenLocalFile_Params",
   [
@@ -4216,9 +4309,12 @@ export {
   Shell_OpenLocalFile_ResponseParamsSpec,
   Shell_OpenWindow_ParamsSpec,
   Shell_OpenWindow_ResponseParamsSpec,
+  Shell_PickImage_ParamsSpec,
+  Shell_PickImage_ResponseParamsSpec,
   Shell_PickPaths_ParamsSpec,
   Shell_PickPaths_ResponseParamsSpec,
   Shell_Print_ParamsSpec,
+  Shell_ReloadShell_ParamsSpec,
   Shell_Reload_ParamsSpec,
   Shell_RunExtensionAction_ParamsSpec,
   Shell_RunExtensionAction_ResponseParamsSpec,

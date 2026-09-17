@@ -9,6 +9,12 @@ Arcwel WebDeck is a **standalone project in its own repository** (`arcwel/WebDec
   "create a new project", create (or ask for) a new repo first.
 - All AGWeb work happens here at the repo root: docs at the top level, the
   Electron app in `app/`.
+- **Settings ownership is decided and written down.** Browser settings are
+  Chromium's own `chrome://settings` page; WebDeck's settings are its sheet at
+  File → Settings…. Do not redraw one inside the other. Read
+  [`SETTINGS_ARCHITECTURE.md`](SETTINGS_ARCHITECTURE.md) before changing any
+  settings entry point — this was reversed once already for reasons that looked
+  sound in isolation.
 
 ## Layout
 

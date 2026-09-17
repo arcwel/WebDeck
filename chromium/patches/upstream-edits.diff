@@ -57072,6 +57072,50 @@ index 12d6be60e250e..8ae9b78a60cfd 100644
      {IDC_SHOW_DOWNLOADS, ui::EF_COMMAND_DOWN | ui::EF_SHIFT_DOWN, ui::VKEY_J},
      {IDC_SHOW_HISTORY, ui::EF_COMMAND_DOWN, ui::VKEY_Y},
      {IDC_VIEW_SOURCE, ui::EF_COMMAND_DOWN | ui::EF_ALT_DOWN, ui::VKEY_U},
+diff --git a/chrome/browser/ui/cocoa/main_menu_builder.mm b/chrome/browser/ui/cocoa/main_menu_builder.mm
+index 1d8c774ed5766..4f6819411bc05 100644
+--- a/chrome/browser/ui/cocoa/main_menu_builder.mm
++++ b/chrome/browser/ui/cocoa/main_menu_builder.mm
+@@ -69,12 +69,11 @@ NSMenuItem* BuildAppMenu(NSApplication* nsapp,
+                   .tag(IDC_ABOUT)
+                   .target(app_delegate)
+                   .action(@selector(orderFrontStandardAboutPanel:)),
+-              Item().is_separator(),
+-              Item(IDS_PREFERENCES)
+-                  .tag(IDC_OPTIONS)
+-                  .target(app_delegate)
+-                  .action(@selector(showPreferences:))
+-                  .remove_if(is_pwa),
++              // WebDeck: Settings lives in the File menu, not here. The
++              // separator goes with it, or the app menu shows two rules in a
++              // row; the PWA variant below still needs one.
++              Item().is_separator()
++                  .remove_if(!is_pwa),
+               Item(IDS_PREFERENCES)
+                   .command_id(IDC_WEB_APP_SETTINGS)
+                   .remove_if(!is_pwa),
+@@ -178,6 +177,21 @@ NSMenuItem* BuildFileMenu(NSApplication* nsapp,
+                   .command_id(IDC_BASIC_PRINT)
+                   .is_alternate()
+                   .remove_if(is_pwa),
++              // WebDeck: Settings, moved here from the app menu. Browser
++              // settings are Chromium's own chrome://settings page; this
++              // opens WebDeck's.
++              //
++              // command_id, NOT the app delegate's showPreferences: that
++              // upstream uses. That selector calls chrome::ShowSettings
++              // directly and never reaches BrowserCommandController, which is
++              // where webdeck::ForwardCommand hands IDC_OPTIONS to the shell.
++              // Targeting the delegate opens a chrome://settings tab instead
++              // of WebDeck's sheet.
++              Item().is_separator()
++                  .remove_if(is_pwa),
++              Item(IDS_PREFERENCES)
++                  .command_id(IDC_OPTIONS)
++                  .remove_if(is_pwa),
+           })
+           .Build();
+   // clang-format on
 diff --git a/chrome/browser/ui/startup/startup_browser_creator_impl.cc b/chrome/browser/ui/startup/startup_browser_creator_impl.cc
 index 332a48ebee92f..ab7dc6bc8e3e4 100644
 --- a/chrome/browser/ui/startup/startup_browser_creator_impl.cc

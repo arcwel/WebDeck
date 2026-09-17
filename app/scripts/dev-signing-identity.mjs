@@ -119,11 +119,30 @@ if (remove) {
   done('ok', `removed ${IDENTITY}`)
 }
 
+// A keychain locks itself when the Mac reboots, and a locked one hands out no
+// identities: codesign fails with errSecInternalComponent and `find-identity`
+// simply does not list this one. The certificate is still there, so the check
+// below still finds it — which is why this used to report "already in the
+// keychain" and leave the build unable to sign. Unlock it here, with the
+// password this script generated, so a reboot costs nothing.
+unlockKeychain()
+
+/** Unlock the dev keychain with the password this script stores beside it. */
+function unlockKeychain() {
+  if (!existsSync(KEYCHAIN) || !existsSync(PASSWORD_FILE)) return
+  const stored = readFileSync(PASSWORD_FILE, 'utf8').trim()
+  if (!stored) return
+  sh('/usr/bin/security', ['unlock-keychain', '-p', stored, KEYCHAIN], { allowFail: true })
+  // Belt and braces: a keychain created before set-keychain-settings was added
+  // still carries an auto-lock timeout, which would relock it mid-build.
+  sh('/usr/bin/security', ['set-keychain-settings', KEYCHAIN], { allowFail: true })
+}
+
 const existing = identityHash()
 if (existing) {
   done(
     'ok',
-    `${IDENTITY} is already in the keychain (${existing}) — build with --identity "${IDENTITY}"`
+    `${IDENTITY} is already in the keychain (${existing}) and unlocked — build with --identity "${IDENTITY}"`
   )
 }
 

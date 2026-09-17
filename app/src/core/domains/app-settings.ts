@@ -1,4 +1,5 @@
 import { coreEnv } from '../env'
+import { sanitizeHiddenToolbarButtons } from '@shared/toolbar-buttons'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { IpcChannels } from '@shared/ipc'
@@ -40,6 +41,8 @@ export interface AppSettings {
   showAskButton: boolean
   profileImage: string
   customEditorsOpenIn: 'browser' | 'deck'
+  /** Toolbar buttons the user hid, by id (shared/toolbar-buttons.ts). */
+  toolbarHidden: string[]
 }
 
 const DEFAULTS: AppSettings = {
@@ -54,7 +57,8 @@ const DEFAULTS: AppSettings = {
   searchEngine: 'duckduckgo',
   showAskButton: true,
   profileImage: '',
-  customEditorsOpenIn: 'browser'
+  customEditorsOpenIn: 'browser',
+  toolbarHidden: []
 }
 
 function file(): string {
@@ -101,6 +105,9 @@ export function sanitizePatch(patch: Partial<AppSettings>): Partial<AppSettings>
   if (typeof patch.searchEngine === 'string') clean.searchEngine = patch.searchEngine
   if (patch.customEditorsOpenIn === 'browser' || patch.customEditorsOpenIn === 'deck') {
     clean.customEditorsOpenIn = patch.customEditorsOpenIn
+  }
+  if (patch.toolbarHidden !== undefined) {
+    clean.toolbarHidden = sanitizeHiddenToolbarButtons(patch.toolbarHidden)
   }
   if (bool(patch.showAskButton)) clean.showAskButton = patch.showAskButton
   // A square PNG data URL and nothing else. The cap is what keeps a settings

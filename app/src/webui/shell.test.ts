@@ -20,6 +20,7 @@ const WINDOWS = [
   IpcChannels.deckOpen,
   IpcChannels.deckClose,
   IpcChannels.deckFocus,
+  IpcChannels.shellReload,
   IpcChannels.floatSync
 ]
 
@@ -74,7 +75,8 @@ const SECONDARY = [
   IpcChannels.browserDefaultStatus,
   IpcChannels.browserMakeDefault,
   // The native open panel that reports real paths (Shell.PickPaths)
-  IpcChannels.dialogPickPaths
+  IpcChannels.dialogPickPaths,
+  IpcChannels.dialogPickImage
 ]
 
 describe('SHELL_BROWSER known-channel allowlist', () => {

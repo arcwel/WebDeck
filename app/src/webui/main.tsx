@@ -134,11 +134,19 @@ function coreToken(): string {
   return typeof window.WEBDECK_CORE_TOKEN === 'string' ? window.WEBDECK_CORE_TOKEN : ''
 }
 
-/** Replace the boot screen with an honest failure, rather than a blank page. */
+/**
+ * Replace the boot screen with an honest failure, rather than a blank page.
+ *
+ * `replaceChildren()`, not `innerHTML = ''`: assigning a string to innerHTML is
+ * an HTML sink, and the default Trusted Types policy installed above refuses
+ * those. So this function — the one that exists to explain a failed boot —
+ * threw instead of rendering, and every boot failure became the blank page it
+ * was written to prevent.
+ */
 function fail(message: string, detail: string): void {
   const root = document.getElementById('root')
   if (!root) return
-  root.innerHTML = ''
+  root.replaceChildren()
   const wrap = document.createElement('div')
   wrap.className = 'webui-fail'
   const h = document.createElement('h1')

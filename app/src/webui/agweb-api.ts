@@ -173,6 +173,7 @@ export function createAgwebApi(ipcRenderer: IpcLike, host: HostCapabilities): Ag
       openDeck: () => ipcRenderer.invoke(IpcChannels.deckOpen),
       closeDeck: () => ipcRenderer.invoke(IpcChannels.deckClose),
       focusDeck: () => ipcRenderer.invoke(IpcChannels.deckFocus),
+      reload: () => ipcRenderer.invoke(IpcChannels.shellReload),
       syncFloats: (groupIds) => ipcRenderer.invoke(IpcChannels.floatSync, groupIds),
       requestSync: () => ipcRenderer.invoke(IpcChannels.shellRequestSync),
       notifyClosed: (role, groupId) => ipcRenderer.invoke(IpcChannels.windowClosed, role, groupId),
@@ -220,6 +221,7 @@ export function createAgwebApi(ipcRenderer: IpcLike, host: HostCapabilities): Ag
     },
     confirm: (message) => ipcRenderer.invoke(IpcChannels.dialogConfirm, message),
     pickPaths: (mode) => ipcRenderer.invoke(IpcChannels.dialogPickPaths, mode),
+    pickImage: () => ipcRenderer.invoke(IpcChannels.dialogPickImage),
     search: (query) => ipcRenderer.invoke(IpcChannels.searchQuery, query),
     exports: {
       html: (html, name) => ipcRenderer.invoke(IpcChannels.exportHtml, html, name),

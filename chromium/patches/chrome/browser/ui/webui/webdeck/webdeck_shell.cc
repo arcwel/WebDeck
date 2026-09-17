@@ -457,6 +457,11 @@ void WebDeckShell::Reload(int32_t tab_id) {
   }
 }
 
+void WebDeckShell::ReloadShell() {
+  shell_contents_->GetController().Reload(content::ReloadType::NORMAL,
+                                          /*check_for_repost=*/false);
+}
+
 void WebDeckShell::GoBack(int32_t tab_id) {
   content::WebContents* contents = GetTabById(tab_id);
   if (contents && contents->GetController().CanGoBack()) {
@@ -1186,10 +1191,10 @@ bool WebDeckShell::ForwardCommand(int command_id, bool execute) {
     case IDC_DEV_TOOLS_CONSOLE:    name = "devtools"; break;
     case IDC_DEV_TOOLS_INSPECT:    name = "devtools"; break;
     case IDC_WEBDECK_TOGGLE_DECK:  name = "toggle-deck"; break;
-    // The app menu's Settings item and its Command-, accelerator. Chromium
-    // would open chrome://settings in a tab; the shell has one settings sheet
-    // whose Browser side IS those settings, so both land in the same place
-    // instead of leaving two surfaces open at once.
+    // The File menu's Settings item and its Command-, accelerator. Chromium
+    // would open chrome://settings in a tab, which is now what the browser
+    // menu's own Settings does; this one opens WebDeck's settings instead, so
+    // each menu leads to the settings it is named for.
     case IDC_OPTIONS:              name = "preferences"; break;
     default:
       return false;
@@ -1522,6 +1527,79 @@ void WebDeckShell::CloseWindow(int32_t window_id) {
 // the reply is owed until the panel answers (FileSelected / MultiFilesSelected /
 // FileSelectionCanceled) or the shell goes away (dtor: ListenerDestroyed, and
 // the callback is dropped, which Mojo reports as a disconnected reply).
+namespace {
+
+// A picked image, as a data: URL of its own bytes. Runs on the thread pool.
+//
+// Capped: a profile picture is a small file, and the whole thing crosses Mojo
+// and then a JSON settings write, so an arbitrarily large pick would be paid
+// for three times over. The page re-encodes it to a 128px square PNG anyway.
+constexpr size_t kMaxPickedImageBytes = 16 * 1024 * 1024;
+
+std::string ReadImageAsDataUrl(const base::FilePath& path) {
+  std::optional<int64_t> size = base::GetFileSize(path);
+  if (!size || *size <= 0 || static_cast<size_t>(*size) > kMaxPickedImageBytes) {
+    return std::string();
+  }
+  std::string bytes;
+  if (!base::ReadFileToStringWithMaxSize(path, &bytes, kMaxPickedImageBytes)) {
+    return std::string();
+  }
+  // The type is named from the extension the panel filtered on. The page hands
+  // these bytes to an <img>, which sniffs them itself and refuses anything that
+  // is not really an image — the label only has to be plausible.
+  const std::string extension = base::ToLowerASCII(path.FinalExtension());
+  std::string mime = "image/png";
+  if (extension == ".jpg" || extension == ".jpeg") {
+    mime = "image/jpeg";
+  } else if (extension == ".gif") {
+    mime = "image/gif";
+  } else if (extension == ".webp") {
+    mime = "image/webp";
+  } else if (extension == ".svg") {
+    mime = "image/svg+xml";
+  }
+  return "data:" + mime + ";base64," + base::Base64Encode(bytes);
+}
+
+}  // namespace
+
+void WebDeckShell::PickImage(PickImageCallback callback) {
+  if (select_file_dialog_) {
+    std::move(callback).Run(std::string());
+    return;
+  }
+  BrowserWindowInterface* window = GetWindow();
+  gfx::NativeWindow owner =
+      window ? window->GetWindow()->GetNativeWindow() : gfx::NativeWindow();
+
+  ui::SelectFileDialog::FileTypeInfo file_types;
+  file_types.allowed_paths = ui::SelectFileDialog::FileTypeInfo::NATIVE_PATH;
+  file_types.extensions = {{FILE_PATH_LITERAL("png"), FILE_PATH_LITERAL("jpg"),
+                            FILE_PATH_LITERAL("jpeg"), FILE_PATH_LITERAL("gif"),
+                            FILE_PATH_LITERAL("webp")}};
+
+  pick_image_callback_ = std::move(callback);
+  select_file_dialog_ = ui::SelectFileDialog::Create(
+      this, std::make_unique<ChromeSelectFilePolicy>(shell_contents_));
+  select_file_dialog_->SelectFile(ui::SelectFileDialog::SELECT_OPEN_FILE,
+                                  u"Choose a Picture", base::FilePath(),
+                                  &file_types, 0,
+                                  base::FilePath::StringType(), owner);
+}
+
+// Read the picked image off the UI thread, then answer the page.
+void WebDeckShell::ReplyWithPickedImage(const base::FilePath& path) {
+  base::ThreadPool::PostTaskAndReplyWithResult(
+      FROM_HERE, {base::MayBlock(), base::TaskPriority::USER_BLOCKING},
+      base::BindOnce(&ReadImageAsDataUrl, path),
+      base::BindOnce(
+          [](PickImageCallback callback, std::string data_url) {
+            std::move(callback).Run(std::move(data_url));
+          },
+          std::move(pick_image_callback_)));
+}
+
 void WebDeckShell::PickPaths(int32_t mode, PickPathsCallback callback) {
   if (select_file_dialog_) {
     std::move(callback).Run({});
@@ -1656,6 +1734,10 @@ void WebDeckShell::OpenLocalFile(int32_t tab_id,
 
 void WebDeckShell::FileSelected(const ui::SelectedFileInfo& file, int index) {
   select_file_dialog_ = nullptr;
+  if (pick_image_callback_) {
+    ReplyWithPickedImage(file.file_path);
+    return;
+  }
   if (open_local_file_callback_) {
     OpenPickedFile(file.file_path);
     return;
@@ -1668,6 +1750,14 @@ void WebDeckShell::FileSelected(const ui::SelectedFileInfo& file, int index) {
 void WebDeckShell::MultiFilesSelected(
     const std::vector<ui::SelectedFileInfo>& files) {
   select_file_dialog_ = nullptr;
+  if (pick_image_callback_) {
+    if (files.empty()) {
+      std::move(pick_image_callback_).Run(std::string());
+    } else {
+      ReplyWithPickedImage(files.front().file_path);
+    }
+    return;
+  }
   if (open_local_file_callback_) {
     if (files.empty()) {
       std::move(open_local_file_callback_).Run(NoLocalFile());
@@ -1733,6 +1823,10 @@ void WebDeckShell::OpenPickedFile(const base::FilePath& path) {
 
 void WebDeckShell::FileSelectionCanceled() {
   select_file_dialog_ = nullptr;
+  if (pick_image_callback_) {
+    std::move(pick_image_callback_).Run(std::string());
+    return;
+  }
   if (open_local_file_callback_) {
     std::move(open_local_file_callback_).Run(NoLocalFile());
     return;

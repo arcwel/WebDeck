@@ -5,6 +5,45 @@ Chromium patches that add a `chrome://webdeck` page and spawn the core service.
 The app half — the client that page talks to — lives in
 `app/src/core/transports/ws-client.ts`.
 
+## The macOS SDK this build needs
+
+Xcode 27 ships an SDK whose `.tbd` stubs name targets (`arm64e.x1-macos`) that
+the `lld` this Chromium pins cannot parse. Every link against `libSystem` fails
+with `unknown target`, starting with the Rust host tools, so the build stops
+before it compiles anything of ours. It is not a WebDeck change that breaks it —
+updating Xcode is enough.
+
+Until the fork rolls onto a Chromium whose toolchain understands that SDK
+(`npm run rebase:fork`), build against the 26.5 SDK that Command Line Tools
+still carries:
+
+Keep a **writable copy** of it. Siso records and restores mtimes for every
+file in the sysroot, and the copy Command Line Tools ships is owned by root, so
+pointing the symlink straight at it builds until the next CLT update touches
+those files and then fails with `failed to update mtime of … permission
+denied`.
+
+```bash
+SRC=/Volumes/BG_Dev/webdeck-chromium/chromium/src
+ditto /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk \
+  /Volumes/BG_Dev/webdeck-chromium/sdks/MacOSX26.5.sdk
+chmod -R u+w /Volumes/BG_Dev/webdeck-chromium/sdks/MacOSX26.5.sdk
+ln -sfn /Volumes/BG_Dev/webdeck-chromium/sdks/MacOSX26.5.sdk \
+  "$SRC/out/webdeck-release/sdk/xcode_links/MacOSX26.5.sdk"
+# in out/webdeck-release/args.gn:
+#   mac_sdk_path = "//out/webdeck-release/sdk/xcode_links/MacOSX26.5.sdk"
+gn gen out/webdeck-release
+```
+
+`mac_sdk_path` must be written in GN's own form and point inside the output
+directory — the symlink farm is there for exactly this. Chromium uses its own
+bundled clang, so only the sysroot comes from that SDK; `actool` and the rest
+still come from Xcode, which is why `DEVELOPER_DIR` is left alone.
+
+Changing the SDK path rebuilds everything (about an hour here). The copy is
+303 MB and outlives a `gn clean`, so it also covers Command Line Tools dropping
+26.5 altogether.
+
 ## Status
 
 **The real WebDeck UI runs on the fork.** `chrome://webdeck` serves the actual

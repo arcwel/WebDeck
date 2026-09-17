@@ -16,6 +16,15 @@ export async function squarePngFromFile(file: File): Promise<string | null> {
   if (!file.type.startsWith('image/')) return null
   const url = URL.createObjectURL(file)
   try {
+    return await squarePngFromUrl(url)
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+/** The same crop and resize, from any URL the page can load (a data: URL). */
+export async function squarePngFromUrl(url: string): Promise<string | null> {
+  try {
     const image = await loadImage(url)
     const canvas = document.createElement('canvas')
     canvas.width = SIZE
@@ -39,8 +48,6 @@ export async function squarePngFromFile(file: File): Promise<string | null> {
     return canvas.toDataURL('image/png')
   } catch {
     return null
-  } finally {
-    URL.revokeObjectURL(url)
   }
 }
 
@@ -54,7 +61,21 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 /** Show the file chooser and return the picked image, already square. */
+/**
+ * Choose a picture.
+ *
+ * On the fork the page is `chrome://webdeck`, where `<input type=file>` opens
+ * nothing at all — the file chooser is not offered to a WebUI page, so the
+ * button did nothing and said nothing. The browser runs the panel instead and
+ * hands back the image's bytes (Shell.PickImage); the scaling still happens
+ * here, in the renderer, where decoding an unknown image belongs. Off that
+ * host the plain input still works.
+ */
 export async function pickProfileImage(): Promise<string | null> {
+  if (typeof window.agweb.pickImage === 'function') {
+    const dataUrl = await window.agweb.pickImage()
+    return dataUrl ? squarePngFromUrl(dataUrl) : null
+  }
   const input = document.createElement('input')
   input.type = 'file'
   input.accept = 'image/*'

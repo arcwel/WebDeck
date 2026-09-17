@@ -51,7 +51,8 @@ const FALLBACK_SETTINGS: AppSettings = {
   searchEngine: 'duckduckgo',
   showAskButton: true,
   profileImage: '',
-  customEditorsOpenIn: 'browser'
+  customEditorsOpenIn: 'browser',
+  toolbarHidden: []
 }
 
 /**

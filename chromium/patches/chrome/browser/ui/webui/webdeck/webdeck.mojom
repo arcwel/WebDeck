@@ -103,6 +103,11 @@ interface Shell {
   CloseTab(int32 tab_id);
   Navigate(int32 tab_id, string url);
   Reload(int32 tab_id);
+  // Reload the shell page itself. A WebUI page cannot reload itself from
+  // script (location.reload() is a no-op there), and one thing needs it: the
+  // extension host is chosen when VS Code's services initialise, so the first
+  // install of an extension with code asks for this.
+  ReloadShell();
   GoBack(int32 tab_id);
   GoForward(int32 tab_id);
   // Stop loading the tab.
@@ -257,6 +262,17 @@ interface Shell {
   // 1 = one folder, 2 = image files. Empty when cancelled, or while another
   // pick is already open. The panel is sheeted on this shell's window.
   PickPaths(int32 mode) => (array<string> paths);
+
+  // The native image panel, answering with the chosen image's own bytes as a
+  // data: URL ("" when cancelled, or while another pick is open).
+  //
+  // A page cannot do this for itself: <input type=file> opens nothing on a
+  // chrome:// page, so "choose a picture" had no way to work. The browser both
+  // shows the panel and reads the file, so no path is ever taken from the page
+  // and this is not a read primitive — only the file the user just pointed at,
+  // size-capped, comes back. The page decodes and scales it in its own
+  // renderer, where untrusted image bytes belong.
+  PickImage() => (string data_url);
 
   // Show the browser's own open panel and open what the USER picked.
   //

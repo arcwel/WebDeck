@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { docNavTarget, searchUrlFor } from '@shared/ipc'
 import { openFileFromPicker } from '@/open-local-file'
 import type { BrowserAccountInfo, ExtensionActionInfo } from '@shared/ipc'
@@ -15,6 +15,8 @@ import { DeckIcon, PopOutIcon, ReaderIcon } from '@/components/icons'
 import { useExtensionViewContainers } from '@/editor-views'
 import { AiAnswer } from '@/components/AiAnswer'
 import { BookmarkControls, FindBar, ZoomControls } from '@/components/BrowserControls'
+import { CustomizeToolbar } from '@/components/CustomizeToolbar'
+import { useToolbarVisibility } from '@/toolbar-visibility'
 import {
   ArrowBackIcon,
   ArrowForwardIcon,
@@ -35,7 +37,7 @@ import { DownloadsIndicator } from '@/components/DownloadsIndicator'
 import { usePopover } from '@/popover'
 // Split view + Picture-in-Picture drive the window's real tabs over the Mojo
 // Shell, so they route through the shell bridge directly (the same blessed
-// cross-import BrowserSettings uses for browserPrefs), not window.agweb.browser.
+// cross-import BrowsingControls uses for browserPrefs), not window.agweb.browser.
 import { pictureInPicture } from '../../../webui/shell'
 
 const PRESETS: { id: DeckPreset; label: string; hint: string }[] = [
@@ -212,6 +214,12 @@ export function Toolbar(): React.JSX.Element {
   // reject, so hide the controls rather than surface a button that silently
   // does nothing (the anti-pattern this codebase calls out for host-owned ops).
   const forkHost = window.agweb.host?.kind === 'chromium'
+  // Which action buttons are on show: WebDeck's own hidden list, plus
+  // Chromium's `browser.show_home_button` for the home button it owns
+  // (toolbar-visibility.ts). Right-clicking the bar opens the same panel
+  // Settings → Application → Browsing shows.
+  const toolbar = useToolbarVisibility()
+  const [customizeAt, setCustomizeAt] = useState<{ x: number; y: number } | null>(null)
   // Split view is store-driven: toggleSplit picks a companion tab (or opens one)
   // and sets splitTabId; Stage streams the two stage rects and the browser binds
   // each tab. This button is one entry point (the utilities bar + command are
@@ -224,7 +232,17 @@ export function Toolbar(): React.JSX.Element {
   const navButton = 'wd-icon'
 
   return (
-    <div className="drag-region flex items-center gap-2 px-2 py-1.5">
+    <div
+      className="drag-region flex items-center gap-2 px-2 py-1.5"
+      onContextMenu={(e) => {
+        // Only the bar itself — a right-click inside the address field keeps
+        // the text menu people expect there.
+        if ((e.target as HTMLElement).closest('input, textarea')) return
+        e.preventDefault()
+        setCustomizeAt({ x: e.clientX, y: e.clientY })
+      }}
+      data-testid="toolbar"
+    >
       {/* Navigation */}
       <div className="flex items-center gap-px">
         <button
@@ -255,26 +273,30 @@ export function Toolbar(): React.JSX.Element {
         >
           {state?.isLoading ? <StopIcon /> : <RefreshIcon />}
         </button>
-        <button
-          className={navButton}
-          onClick={() => void navigateTab(activeTabId, homeUrl)}
-          aria-label="Home"
-          title={`Home — ${homeUrl}`}
-          data-testid="nav-home"
-        >
-          <ChromeHomeIcon />
-        </button>
-        <button
-          className={`${navButton} ${readerOpen ? 'wd-icon-on' : ''}`}
-          disabled={!tabHasContent}
-          onClick={() => setReaderOpen(!readerOpen)}
-          aria-label="Reader mode"
-          aria-pressed={readerOpen}
-          title="Reader mode"
-          data-testid="reader-toggle"
-        >
-          <ReaderIcon />
-        </button>
+        {toolbar.showHome && (
+          <button
+            className={navButton}
+            onClick={() => void navigateTab(activeTabId, homeUrl)}
+            aria-label="Home"
+            title={`Home — ${homeUrl}`}
+            data-testid="nav-home"
+          >
+            <ChromeHomeIcon />
+          </button>
+        )}
+        {toolbar.shows('reader') && (
+          <button
+            className={`${navButton} ${readerOpen ? 'wd-icon-on' : ''}`}
+            disabled={!tabHasContent}
+            onClick={() => setReaderOpen(!readerOpen)}
+            aria-label="Reader mode"
+            aria-pressed={readerOpen}
+            title="Reader mode"
+            data-testid="reader-toggle"
+          >
+            <ReaderIcon />
+          </button>
+        )}
       </div>
 
       {/* Address, centred: the icon clusters flank it on both sides. The
@@ -286,6 +308,8 @@ export function Toolbar(): React.JSX.Element {
             url={state?.url ?? ''}
             title={state?.title ?? ''}
             align="left"
+            showStar={toolbar.shows('bookmark')}
+            showList={toolbar.shows('bookmarks')}
           />
         </div>
         <input
@@ -319,7 +343,7 @@ export function Toolbar(): React.JSX.Element {
           className="m w-full border border-[var(--wd-glass-border)] bg-[var(--wd-field)] py-1.5 pr-14 pl-[4.6rem] text-[12px] text-[var(--wd-text)] outline-none placeholder:text-[var(--wd-dim)] focus:border-[var(--wd-accent-line)]"
         />
         <div className="absolute right-1.5 flex items-center">
-          <ZoomControls tabId={activeTabId} />
+          {toolbar.shows('zoom') && <ZoomControls tabId={activeTabId} />}
         </div>
         {askOpen !== null ? (
           <AiAnswer
@@ -359,44 +383,59 @@ export function Toolbar(): React.JSX.Element {
 
       {/* Everything from here sits hard right. */}
       <div className="ml-auto flex flex-none items-center gap-px">
-        <button
-          onClick={() => setUtilitiesOpen(!utilitiesOpen)}
-          className={`wd-icon ${utilitiesOpen ? 'wd-icon-on' : ''}`}
-          title="Favourites bar"
-          aria-label="Favourites bar"
-          data-testid="utilities-toggle"
-        >
-          <GridIcon />
-        </button>
+        {toolbar.shows('utilities') && (
+          <button
+            onClick={() => setUtilitiesOpen(!utilitiesOpen)}
+            className={`wd-icon ${utilitiesOpen ? 'wd-icon-on' : ''}`}
+            title="Favourites bar"
+            aria-label="Favourites bar"
+            data-testid="utilities-toggle"
+          >
+            <GridIcon />
+          </button>
+        )}
         {forkHost && (
           <>
-            <button
-              onClick={toggleSplit}
-              className={`wd-icon ${splitTabId ? 'wd-icon-on' : ''}`}
-              title={splitTabId ? 'Exit split view' : 'Split view — stage two tabs side by side'}
-              aria-label="Split view"
-              aria-pressed={splitTabId !== null}
-              data-testid="split-toggle"
-            >
-              <SplitscreenIcon />
-            </button>
-            <button
-              onClick={togglePip}
-              className="wd-icon"
-              title="Picture-in-Picture — pop the video out"
-              aria-label="Picture-in-Picture"
-              data-testid="pip-toggle"
-            >
-              <PopOutIcon />
-            </button>
+            {toolbar.shows('split') && (
+              <button
+                onClick={toggleSplit}
+                className={`wd-icon ${splitTabId ? 'wd-icon-on' : ''}`}
+                title={splitTabId ? 'Exit split view' : 'Split view — stage two tabs side by side'}
+                aria-label="Split view"
+                aria-pressed={splitTabId !== null}
+                data-testid="split-toggle"
+              >
+                <SplitscreenIcon />
+              </button>
+            )}
+            {toolbar.shows('pip') && (
+              <button
+                onClick={togglePip}
+                className="wd-icon"
+                title="Picture-in-Picture — pop the video out"
+                aria-label="Picture-in-Picture"
+                data-testid="pip-toggle"
+              >
+                <PopOutIcon />
+              </button>
+            )}
           </>
         )}
-        <PinnedExtensions tabId={activeTabId} url={state?.url ?? ''} />
-        <ExtensionsButton />
+        {toolbar.shows('extensions') && (
+          <>
+            <PinnedExtensions tabId={activeTabId} url={state?.url ?? ''} />
+            <ExtensionsButton />
+          </>
+        )}
         <DownloadsIndicator />
-        <FindBar tabId={activeTabId} />
-        <BrowserMenu />
+        <FindBar tabId={activeTabId} showButton={toolbar.shows('find')} />
+        <BrowserMenu
+          onCustomizeToolbar={() => setCustomizeAt({ x: window.innerWidth - 300, y: 44 })}
+        />
       </div>
+      {customizeAt && (
+        <CustomizeToolbarPopover at={customizeAt} onClose={() => setCustomizeAt(null)} />
+      )}
 
       {/* Profiles sit directly left of the Deck button. */}
       <ProfileButton />
@@ -719,12 +758,12 @@ function ProfileButton(): React.JSX.Element {
               {label}
             </button>
           ))}
-          {/* Generic settings has one home: the sheet, whose Browser side is
-              Chromium's settings. A second entry that opened a chrome:// tab
-              is what made "settings" ambiguous. */}
+          {/* Every row above opens one of Chromium's pages; the root of its
+              settings belongs with them. WebDeck's own settings are the File
+              menu's Settings… item. */}
           <button
             onClick={() => {
-              useShellStore.getState().setSettingsOpen(true)
+              useShellStore.getState().newTab('chrome://settings')
               setOpen(false)
             }}
             className="block w-full rounded-lg px-3 py-1.5 text-left text-[12px] text-[var(--wd-text)] hover:bg-[var(--wd-hover)]"
@@ -1037,7 +1076,11 @@ function ExtensionsButton(): React.JSX.Element {
  * Chrome's overflow menu — the settings entry point the design puts at the end
  * of the icon cluster, and which the app was missing entirely.
  */
-function BrowserMenu(): React.JSX.Element {
+function BrowserMenu({
+  onCustomizeToolbar
+}: {
+  onCustomizeToolbar: () => void
+}): React.JSX.Element {
   const [open, setOpen] = useState(false)
   const proxyEnabled = useShellStore((s) => s.embedProxyEnabled)
   const setEmbedProxyEnabled = useShellStore((s) => s.setEmbedProxyEnabled)
@@ -1095,7 +1138,21 @@ function BrowserMenu(): React.JSX.Element {
             className={item}
             onClick={() => {
               setOpen(false)
-              useShellStore.getState().setSettingsOpen(true)
+              onCustomizeToolbar()
+            }}
+            data-testid="menu-customize-toolbar"
+          >
+            <span className="w-4 text-[var(--wd-dim)]">▤</span> Customize toolbar…
+          </button>
+          {/* Settings reached from inside the browser is the browser's own
+              settings page, not WebDeck's sheet — a redrawing of it here was
+              always a subset of the real thing. WebDeck's settings are under
+              the File menu's Settings… item. */}
+          <button
+            className={item}
+            onClick={() => {
+              setOpen(false)
+              useShellStore.getState().newTab('chrome://settings')
             }}
             data-testid="menu-settings"
           >
@@ -1153,6 +1210,57 @@ function BrowserMenu(): React.JSX.Element {
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * The customize panel, anchored where the right-click happened.
+ *
+ * A plain fixed-position card rather than the block popover: it is summoned by
+ * a coordinate, not by a trigger element, and it must sit above the toolbar's
+ * own drag region.
+ */
+function CustomizeToolbarPopover({
+  at,
+  onClose
+}: {
+  at: { x: number; y: number }
+  onClose: () => void
+}): React.JSX.Element {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const onDown = (e: MouseEvent): void => {
+      if (!ref.current?.contains(e.target as Node)) onClose()
+    }
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') onClose()
+    }
+    // Deferred: the press that opened this must not immediately close it.
+    const id = setTimeout(() => {
+      window.addEventListener('mousedown', onDown)
+      window.addEventListener('keydown', onKey)
+    })
+    return () => {
+      clearTimeout(id)
+      window.removeEventListener('mousedown', onDown)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [onClose])
+
+  const width = 272
+  const left = Math.max(8, Math.min(at.x, window.innerWidth - width - 8))
+  return (
+    <div
+      ref={ref}
+      style={{ left, top: at.y + 4, width }}
+      className="wd-glass fixed z-50 rounded-xl border border-[var(--wd-glass-border)] p-1 text-[12px] shadow-xl"
+      data-testid="customize-toolbar-popover"
+    >
+      <div className="px-2 py-1 text-[10px] font-semibold tracking-wider text-[var(--wd-dim)] uppercase">
+        Customize toolbar
+      </div>
+      <CustomizeToolbar compact />
     </div>
   )
 }

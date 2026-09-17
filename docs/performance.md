@@ -127,6 +127,46 @@ the baseline, in three places, and that is the next performance job:
    update checker and the debug adapters all load at boot; lazy-loading the
    providers until a runtime is asked for is the obvious cut.
 
+### Where the doubling actually is (2026-09-14, evening)
+
+Per-process footprints of a fresh instance with an **empty data directory**
+(no extensions, no local models configured, update check off), 25 s after
+launch, `--tabs 0`:
+
+| Process                                                | Footprint                                           | Baseline (Sep 1) |
+| ------------------------------------------------------ | --------------------------------------------------- | ---------------- |
+| Shell renderer (`chrome://webdeck`)                    | 162 MB                                              | 158–160 MB       |
+| Extension host iframe (loopback origin)                | 68 MB                                               | did not exist    |
+| Second page renderer (`about:blank`)                   | 57 MB                                               | —                |
+| Three small renderers (top-chrome popups, spare)       | 26–27 MB each                                       | —                |
+| Browser-extension service worker (MV3, user-installed) | 29 MB                                               | —                |
+| GPU process                                            | 152 MB at 25 s; 404–441 MB when the harness settles | 216–238 MB       |
+| Browser process                                        | 73 MB                                               | 74 MB            |
+| webdeck-core                                           | 67 MB (85 MB with the real data dir)                | 28 MB            |
+| Standalone webdeck-core, idle                          | **28 MB**                                           | 28 MB            |
+
+So the shell renderer has not grown, and the core at rest has not grown. The
+difference is made of:
+
+1. **Processes that did not exist in September.** The extension host's
+   iframe is its own site-isolated renderer, started at boot whether or not
+   a code extension is installed (~68 MB). Chromium's top-chrome WebUI popups
+   and spare renderers add three small ones. Installed extensions themselves
+   cost about 70 MB on top (1,121 MB with three installed vs 1,052 without).
+2. **The GPU process varies with time**, from 152 MB shortly after launch to
+   400+ MB once the harness settles; the September number was one sample.
+   It needs a proper series before it is called a regression.
+3. **The core grows by serving the shell**, from 28 MB idle to 67–85 MB after
+   the shell's boot requests (workspace watch, model runtimes, extensions,
+   git), not from anything loaded at start. A heap snapshot of the connected
+   core is the next step; the update checker and the debug adapters are not
+   it (they were off and unused here).
+
+The one clear, avoidable cost was the extension host renderer at boot when
+nothing needs it. It now starts only when an installed extension has code to
+run (`extension-host-policy.ts`); the first install of one asks for a reload,
+which Anthony chose over paying the renderer at every launch.
+
 ## Follow-ups (not blockers)
 
 - Profile the GPU process's compositing layers under the glass theme (4).

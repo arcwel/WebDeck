@@ -9,6 +9,7 @@ import {
 import { useShellStore } from '@/store'
 import type { UpdateStatus } from '@shared/updates'
 import { pickProfileImage } from '@/profile-image'
+import { BrowsingControls } from '@/components/BrowsingControls'
 
 /**
  * The Electron application settings — the ones that configure the app itself
@@ -193,6 +194,16 @@ export function ApplicationSettings(): React.JSX.Element {
         <ProfilePicture settings={settings} onChange={setSettings} />
       </Section>
 
+      {/* Chromium's own settings are reached at chrome://settings, the real
+          page. What stays here is what that page cannot show: WebDeck's
+          toolbar, WebDeck's ad blocker, the default-browser check, and the
+          remover behind Clear browsing data. */}
+      {window.agweb.host.ownsBrowserFeatures && (
+        <Section title="Browsing">
+          <BrowsingControls />
+        </Section>
+      )}
+
       <Section title="Start page">
         <StartPageSites />
       </Section>
@@ -226,10 +237,10 @@ export function ApplicationSettings(): React.JSX.Element {
         <Section title="Privacy">
           {/* This panel's own clear-data call has no handler on the fork: the
               button reported "no handler for app-settings:clear-data" and
-              cleared nothing. Chromium's remover is the real one — the Browser
-              tab drives it, and chrome://settings has the full set. */}
+              cleared nothing. Chromium's remover is the real one — the Browsing
+              section drives it, and chrome://settings has the full set. */}
           <p className="px-2 py-1 text-[11px] leading-relaxed text-[var(--wd-dim)]">
-            Clearing browsing data lives on the <strong>Browser</strong> tab, which drives
+            Clearing browsing data is under <strong>Browsing</strong> above, which drives
             Chromium&apos;s own remover. For everything else — site permissions, spell-check
             languages, hardware acceleration and Do Not Track — Chromium owns the setting:
           </p>
