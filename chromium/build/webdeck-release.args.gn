@@ -1,0 +1,48 @@
+# Arcwel WebDeck — GN args for out/webdeck-release.
+#
+# The recorded copy of the build config. `gn gen` reads args.gn from the output
+# directory, which is never in git, so without this file a fresh checkout had
+# no way to rebuild the same browser. Install it with:
+#
+#   cp chromium/build/webdeck-release.args.gn "$SRC/out/webdeck-release/args.gn"
+#
+# `npm run verify:patches` fails when the live args.gn and this file disagree,
+# so a change made in one place cannot quietly go missing from the other.
+# Change a value here, copy it over, then `gn gen`. See chromium/SETUP.md.
+
+target_cpu = "arm64"
+is_official_build = true
+is_component_build = false
+is_debug = false
+is_chrome_branded = false
+symbol_level = 1
+blink_symbol_level = 0
+use_remoteexec = false
+
+# No PGO profiles in this checkout. Official builds want them; without this the
+# build stops. The browser is measurably slower than stock Chrome as a result.
+chrome_pgo_phase = 0
+
+# Development keychain (components/os_crypt/webdeck/dev_keychain.gni): the
+# cookie and password key live in a plaintext file in the profile instead of a
+# Keychain item, so a dev build never raises a Keychain prompt.
+#
+# Dev machine only. A release build omits this line (the default is false), and
+# package-fork.mjs refuses to package a dev-keychain build unless it is given
+# --allow-dev-keychain.
+webdeck_dev_keychain = true
+
+# Pin the macOS SDK.
+#
+# Xcode 27 ships an SDK whose .tbd stubs name targets (arm64e.x1-macos) that
+# the lld this Chromium pins cannot parse — every link against libSystem fails
+# with "unknown target". Until the fork rolls to a Chromium with a newer
+# toolchain, build against the 26.5 SDK. Chromium uses its own bundled clang,
+# so only the sysroot comes from here.
+#
+# gn requires a path inside the output directory, written in GN's own //out
+# form (an absolute path and a build-dir-relative path are both rejected).
+# That farm entry must be a symlink to a WRITABLE copy of the SDK: siso restores
+# mtimes across the sysroot, and the Command Line Tools copy is root-owned.
+# chromium/SETUP.md step 5 creates both.
+mac_sdk_path = "//out/webdeck-release/sdk/xcode_links/MacOSX26.5.sdk"

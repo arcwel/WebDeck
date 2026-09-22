@@ -52,21 +52,23 @@ Apple's library validation.
 The dev build is a component build with fatal DCHECKs — a tester would hit
 crashes that are not real bugs. The release build fixes both.
 
+The build config is recorded in
+[`build/webdeck-release.args.gn`](build/webdeck-release.args.gn); do not type
+it out here. A release build is that file **without the
+`webdeck_dev_keychain = true` line**:
+
 ```bash
-cd /Volumes/BG_Dev/webdeck-chromium/chromium/src
-gn gen out/webdeck-release --args='
-  target_cpu = "arm64"
-  is_official_build = true
-  is_component_build = false
-  is_debug = false
-  is_chrome_branded = false
-  symbol_level = 1
-  blink_symbol_level = 0
-  use_remoteexec = false
-  chrome_pgo_phase = 0
-'
-autoninja -C out/webdeck-release chrome
+SRC=/Volumes/BG_Dev/webdeck-chromium/chromium/src
+grep -v '^webdeck_dev_keychain' ~/Projects/WebDeck/chromium/build/webdeck-release.args.gn \
+  > "$SRC/out/webdeck-release/args.gn"
+cd "$SRC" && gn gen out/webdeck-release
+autoninja -C out/webdeck-release chrome -j 6
 ```
+
+Never use `gn gen --args='…'` for this directory. It overwrites `args.gn`
+wholesale, and a hand-typed list silently drops the macOS SDK pin that builds
+under Xcode 27 need. `npm run verify:patches` reports which keychain mode the
+live config is in and fails on any other difference from the recorded file.
 
 Notes:
 

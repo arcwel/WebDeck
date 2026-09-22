@@ -1,5 +1,9 @@
 # `chrome://webdeck` — the fork's WebUI patch set
 
+**Setting up from scratch?** [SETUP.md](SETUP.md) rebuilds the fork from a fresh
+Chromium download using only this repo: the pinned version, the patch set and
+the recorded build config.
+
 The WebDeck bridge has two halves. **This directory is the fork half**: the
 Chromium patches that add a `chrome://webdeck` page and spawn the core service.
 The app half — the client that page talks to — lives in

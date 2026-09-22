@@ -190,6 +190,49 @@ try {
   note('warn', 'modified upstream files', `could not enumerate: ${err.message.split('\n')[0]}`)
 }
 
+// 5. The build config the repo records is the one the checkout builds with.
+//    args.gn lives in the output directory, which git never sees, so it is the
+//    one input that could drift without any diff showing it. Compared on the
+//    values alone: comments are free to differ.
+{
+  const recorded = join(repoRoot, 'chromium', 'build', 'webdeck-release.args.gn')
+  const live = join(checkout, 'out', 'webdeck-release', 'args.gn')
+  // webdeck_dev_keychain is the one line a release build legitimately drops
+  // (chromium/RELEASING.md), so it is left out of the comparison and reported
+  // instead. Shipping a dev-keychain build is already refused by package-fork.
+  const DEV_KEYCHAIN = /^webdeck_dev_keychain\s*=\s*true$/
+  const lines = (file) =>
+    readFileSync(file, 'utf8')
+      .split('\n')
+      .map((line) => line.replace(/#.*$/, '').trim())
+      .filter(Boolean)
+  const values = (file) =>
+    lines(file)
+      .filter((line) => !/^webdeck_dev_keychain\b/.test(line))
+      .join('\n')
+  if (!existsSync(recorded)) {
+    note('error', 'build config', 'chromium/build/webdeck-release.args.gn is missing')
+  } else if (!existsSync(live)) {
+    // A fresh checkout before `gn gen`: nothing to compare yet, and not wrong.
+    note(
+      'warn',
+      'build config',
+      `no ${relative(checkout, live)} yet — install it (chromium/SETUP.md step 5)`
+    )
+  } else if (values(recorded) !== values(live)) {
+    note(
+      'error',
+      'build config',
+      `out/webdeck-release/args.gn differs from chromium/build/webdeck-release.args.gn — update the recorded copy or re-install it, then gn gen`
+    )
+  } else {
+    const mode = lines(live).some((line) => DEV_KEYCHAIN.test(line))
+      ? 'dev keychain'
+      : 'release keychain'
+    note('ok', 'build config', `out/webdeck-release/args.gn matches the recorded copy (${mode})`)
+  }
+}
+
 const errors = findings.filter((f) => f.level === 'error')
 const exitCode = errors.length ? 1 : 0
 

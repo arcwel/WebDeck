@@ -62,11 +62,15 @@ if (!files.includes('index.html')) {
 
 // Replace the previous bundle wholesale: a stale chunk left behind would be
 // packed into the binary and never served.
+//
+// Created before it is listed: on a freshly fetched checkout this directory
+// does not exist yet (it is build output, deliberately not in the patch set),
+// and listing it first threw ENOENT before anything was packed.
+mkdirSync(dest, { recursive: true })
 for (const entry of readdirSync(dest)) {
   if (entry === 'BUILD.gn' || entry === 'webdeck_resources.grd') continue
   rmSync(join(dest, entry), { recursive: true, force: true })
 }
-mkdirSync(dest, { recursive: true })
 cpSync(built, dest, { recursive: true })
 
 // The page's Mojo bindings must carry the message ids of the build that will
@@ -74,7 +78,20 @@ cpSync(built, dest, { recursive: true })
 // not; a mojom edit renumbers both. Packing bindings from the wrong out dir
 // ships a page the browser kills at its first Shell call — so refuse it here,
 // where it is cheap, rather than find it in a release candidate.
-{
+// --bootstrap breaks a cycle that only a fresh checkout meets. The patched
+// chrome/browser/resources/BUILD.gn names this directory's target, so `gn gen`
+// fails until the BUILD.gn below exists — and the Mojo check needs bindings
+// that only a generated build directory can produce. A bootstrap pack writes
+// the build files so `gn gen` can run; it is never a pack to build a browser
+// from, and the real pack (pack:webui:release) re-checks before that.
+const bootstrap = process.argv.includes('--bootstrap')
+if (bootstrap) {
+  console.warn(
+    'BOOTSTRAP pack: Mojo ids NOT checked. This only lets `gn gen` run on a fresh\n' +
+      'checkout. Build the generator, then run `npm run pack:webui:release` before\n' +
+      'building chrome, or the page may be killed at its first Shell call.'
+  )
+} else {
   const buildIndex = process.argv.indexOf('--build-dir')
   const buildDir =
     buildIndex !== -1 && process.argv[buildIndex + 1] ? process.argv[buildIndex + 1] : 'out/webdeck'

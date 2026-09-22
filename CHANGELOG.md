@@ -34,6 +34,13 @@ All notable changes to Arcwel WebDeck are recorded here. This project adheres to
 
 ### Added
 
+- **The fork can be rebuilt from a fresh Chromium download.** The build config
+  lived only in the build directory, which git never sees, so a new drive or a
+  new Mac had no record of it. It is now `chromium/build/webdeck-release.args.gn`,
+  and `chromium/SETUP.md` walks from an empty drive to an installed app in the
+  one order that works. `verify:patches` fails if the live config and the
+  recorded one differ, apart from the dev-keychain line a release build drops.
+
 - **Customize the toolbar.** Right-click the toolbar (or Settings →
   Application → Browsing) to choose which action buttons sit beside the
   address bar:
@@ -65,6 +72,15 @@ add|remove`, against the same data directory the app uses, with `--json`
   or _not activated yet_; a declarative one says there is nothing to run.
 
 ### Fixed
+
+- **`pack-webui` on a fresh checkout.** It listed the web UI resources
+  directory before creating it, so it crashed with `ENOENT`; and its Mojo check
+  could never pass before `gn gen`, while `gn gen` needs the `BUILD.gn` the pack
+  writes. `--bootstrap` writes the build files without the check so `gn gen`
+  can run; every real pack still checks.
+- **`RELEASING.md` would have broken the build.** Its `gn gen --args='…'`
+  overwrote `args.gn` with a hand-typed list missing the macOS SDK pin. It now
+  installs the recorded config.
 
 - **The page still is bounded on very large displays.** The still shown
   behind a menu was captured at the view's native pixels, which on a 5K or
