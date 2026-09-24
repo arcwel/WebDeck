@@ -1,5 +1,9 @@
 # `chrome://webdeck` — the fork's WebUI patch set
 
+**The checkout path is declared once**, as `checkout` in [fork.json](fork.json);
+`app/scripts/chromium-src.mjs` resolves it for every script. Paths written out
+below are that value today.
+
 **Setting up from scratch?** [SETUP.md](SETUP.md) rebuilds the fork from a fresh
 Chromium download using only this repo: the pinned version, the patch set and
 the recorded build config.
@@ -28,11 +32,11 @@ those files and then fails with `failed to update mtime of … permission
 denied`.
 
 ```bash
-SRC=/Volumes/BG_Dev/webdeck-chromium/chromium/src
+SRC=/Volumes/BG_Dev/WebDeck/chromium/src
 ditto /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk \
-  /Volumes/BG_Dev/webdeck-chromium/sdks/MacOSX26.5.sdk
-chmod -R u+w /Volumes/BG_Dev/webdeck-chromium/sdks/MacOSX26.5.sdk
-ln -sfn /Volumes/BG_Dev/webdeck-chromium/sdks/MacOSX26.5.sdk \
+  /Volumes/BG_Dev/WebDeck/sdks/MacOSX26.5.sdk
+chmod -R u+w /Volumes/BG_Dev/WebDeck/sdks/MacOSX26.5.sdk
+ln -sfn /Volumes/BG_Dev/WebDeck/sdks/MacOSX26.5.sdk \
   "$SRC/out/webdeck-release/sdk/xcode_links/MacOSX26.5.sdk"
 # in out/webdeck-release/args.gn:
 #   mac_sdk_path = "//out/webdeck-release/sdk/xcode_links/MacOSX26.5.sdk"

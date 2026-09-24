@@ -53,9 +53,10 @@ import {
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { canonicalize } from './update-check.mjs'
+import { buildPath } from './chromium-src.mjs'
 
 const repoRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))))
-const DEFAULT_BUILD_DIR = '/Volumes/BG_Dev/webdeck-chromium/chromium/src/out/webdeck'
+const DEFAULT_BUILD_DIR = buildPath()
 
 function arg(name, fallback = undefined) {
   const i = process.argv.indexOf(`--${name}`)

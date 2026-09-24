@@ -33,6 +33,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { WebSocket } from 'ws'
+import { chromiumSrc as perfChromiumSrc } from './chromium-src.mjs'
 
 const appRoot = dirname(dirname(fileURLToPath(import.meta.url)))
 
@@ -40,9 +41,13 @@ export const EXIT_OK = 0
 export const EXIT_THRESHOLD = 1
 export const EXIT_ERROR = 2
 
-const DEFAULT_BROWSER =
-  '/Volumes/BG_Dev/webdeck-chromium/chromium/src/out/webdeck-release-package/stage/' +
+// The packaged stage build, not out/webdeck-release: perf measures what a
+// tester would run. The checkout root comes from chromium-src.mjs.
+const DEFAULT_BROWSER = join(
+  perfChromiumSrc(),
+  'out/webdeck-release-package/stage',
   'Arcwel WebDeck.app/Contents/MacOS/Arcwel WebDeck'
+)
 const DEBUG_PORT = 9337
 const CORE_EXE = join(appRoot, 'out', 'core', 'webdeck-core')
 

@@ -19,16 +19,13 @@ import {
   statSync,
   writeFileSync
 } from 'node:fs'
-import { dirname, join, relative, resolve } from 'node:path'
+import { dirname, join, relative } from 'node:path'
 import { checkBindingsAgainstBuild } from './mojo-ids.mjs'
 import { fileURLToPath } from 'node:url'
+import { chromiumSrc as resolveChromiumSrc } from './chromium-src.mjs'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
-const argIndex = process.argv.indexOf('--chromium')
-const chromiumSrc =
-  argIndex !== -1 && process.argv[argIndex + 1]
-    ? resolve(process.argv[argIndex + 1])
-    : '/Volumes/BG_Dev/webdeck-chromium/chromium/src'
+const chromiumSrc = resolveChromiumSrc()
 
 const built = join(root, 'out', 'webui')
 const destRel = 'chrome/browser/resources/webdeck'

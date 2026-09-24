@@ -35,10 +35,10 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
+import { builtAppBinary } from './chromium-src.mjs'
 
 const repoRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))))
-const DEFAULT_BROWSER =
-  '/Volumes/BG_Dev/webdeck-chromium/chromium/src/out/webdeck/Arcwel WebDeck.app/Contents/MacOS/Arcwel WebDeck'
+const DEFAULT_BROWSER = builtAppBinary()
 const DEBUG_PORT = 9335
 
 function arg(name, fallback = undefined) {

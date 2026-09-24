@@ -25,7 +25,7 @@ inside the browser bundle, sign the whole thing, and wrap it in a DMG.
 
 - macOS on Apple Silicon (arm64). This is the only target today.
 - The Chromium checkout with depot_tools on `PATH`
-  (`/Volumes/BG_Dev/webdeck-chromium/`).
+  (`/Volumes/BG_Dev/WebDeck/`).
 - Node and npm, for building the core and running the pipeline.
 
 ## 1. Build the core
@@ -58,7 +58,7 @@ it out here. A release build is that file **without the
 `webdeck_dev_keychain = true` line**:
 
 ```bash
-SRC=/Volumes/BG_Dev/webdeck-chromium/chromium/src
+SRC=/Volumes/BG_Dev/WebDeck/chromium/src
 grep -v '^webdeck_dev_keychain' ~/Projects/WebDeck/chromium/build/webdeck-release.args.gn \
   > "$SRC/out/webdeck-release/args.gn"
 cd "$SRC" && gn gen out/webdeck-release
@@ -114,7 +114,7 @@ component dir — `pack:webui:release` regenerates the bindings from
 match that build's `webdeck.mojom-shared-message-ids.h`:
 
 ```bash
-cd /Volumes/BG_Dev/webdeck-chromium/chromium/src
+cd /Volumes/BG_Dev/WebDeck/chromium/src
 autoninja -C out/webdeck-release chrome/browser/ui/webui/webdeck:mojo_bindings_ts__generator
 npm --prefix <repo>/app run pack:webui:release
 autoninja -C out/webdeck-release chrome
@@ -128,7 +128,7 @@ build's bindings back for development.
 From the repo root, with the release build finished:
 
 ```bash
-APP="/Volumes/BG_Dev/webdeck-chromium/chromium/src/out/webdeck-release/Arcwel WebDeck.app"
+APP="/Volumes/BG_Dev/WebDeck/chromium/src/out/webdeck-release/Arcwel WebDeck.app"
 
 # Put the core inside the browser bundle.
 node app/scripts/install-core.mjs --app "$APP"
@@ -194,7 +194,7 @@ With all three in place, one command produces the installer:
 ```bash
 cd app
 npm run release:dmg -- \
-  --build-dir /Volumes/BG_Dev/webdeck-chromium/chromium/src/out/webdeck-release \
+  --build-dir /Volumes/BG_Dev/WebDeck/chromium/src/out/webdeck-release \
   --out /Volumes/BG_Dev/webdeck-rc1
 ```
 

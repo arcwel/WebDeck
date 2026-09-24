@@ -21,15 +21,16 @@
 // Usage: node scripts/gen-mojo-bindings.mjs [--chromium <src>] [--build-dir <out dir>]
 import { build } from 'esbuild'
 import { existsSync, mkdirSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { chromiumSrc } from './chromium-src.mjs'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 function arg(name, fallback) {
   const i = process.argv.indexOf(`--${name}`)
   return i !== -1 && process.argv[i + 1] ? process.argv[i + 1] : fallback
 }
-const chromium = resolve(arg('chromium', '/Volumes/BG_Dev/webdeck-chromium/chromium/src'))
+const chromium = chromiumSrc()
 const buildDir = arg('build-dir', 'out/webdeck')
 
 const generated = join(

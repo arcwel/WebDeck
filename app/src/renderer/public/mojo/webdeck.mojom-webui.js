@@ -1,6 +1,6 @@
 // GENERATED from out/webdeck-release by scripts/gen-mojo-bindings.mjs — do not edit.
 
-// ../../../../../Volumes/BG_Dev/webdeck-chromium/chromium/src/out/webdeck-release/gen/chrome/browser/ui/webui/webdeck/webdeck.mojom-webui.ts
+// ../../../../../Volumes/BG_Dev/WebDeck/chromium/src/out/webdeck-release/gen/chrome/browser/ui/webui/webdeck/webdeck.mojom-webui.ts
 import { mojo } from "//resources/mojo/mojo/public/js/bindings.js";
 import {
   RectSpec as gfx_mojom_RectSpec
