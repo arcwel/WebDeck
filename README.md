@@ -42,6 +42,7 @@ Four things follow from that ordering:
 ### A real browser
 
 - Chromium M153, branded and built as Arcwel WebDeck. Tabs sit in the title bar, inline with the traffic lights; the toolbar carries the address bar, bookmarks, extensions and profile.
+- **The toolbar is yours.** Right-click it, or open Settings → Application → Browsing, to choose which action buttons show: Reader mode, the bookmark star, Bookmarks, Zoom, Favourites bar, Split view, Picture-in-Picture, Extensions and Find. Navigation, the address bar, the menu and the profile button stay put, and a hidden button is still in the ⋮ menu, so nothing goes out of reach. Your profile button takes a picture of your own.
 - **Tab groups, drag-to-reorder, tab search, split view, Picture-in-Picture, Reader Mode, find in page, zoom, print, per-tab DevTools.**
 - **Vertical tabs** as a rail block docked beside the page, with groups as sections.
 - A **new-tab page that is a start page**: address field focused, top sites, bookmarks, and one quiet row of projects. Every shortcut works whether the page or the shell has focus; <kbd>⌘D</kbd> always means the Deck.
@@ -96,11 +97,13 @@ The page carries the path but is not trusted with it. The browser signs a path o
 
 ### Settings
 
-Settings open as their own surface: Application, AI keys (held in the OS keychain, or read from your password manager so WebDeck stores nothing), Colours (every colour the app paints), Browser privacy, and the VS Code Editor and Keybindings documents. **WebDeck Sync** keeps settings, policy, model and theme identical across machines through a local-first file, with no account and no server.
+Two surfaces, split by who owns the setting. **Browser settings are Chromium's own `chrome://settings`**, opened from the browser menu — the real page, not a copy of it, so nothing upstream adds goes missing. **WebDeck's own settings** are at **File → Settings…** (⌘,): Application, AI keys (held in the OS keychain, or read from your password manager so WebDeck stores nothing), Colours (every colour the app paints), and the VS Code Editor and Keybindings documents. **WebDeck Sync** keeps settings, policy, model and theme identical across machines through a local-first file, with no account and no server.
+
+The few browsing controls Chromium cannot show — the toolbar WebDeck draws, its ad blocker, the default-browser check and Clear browsing data — live under Settings → Application → Browsing.
 
 ### Bring your history and bookmarks with you
 
-Settings → WebDeck → Application lists every browser profile on the machine with a page count and an Import button: Chrome, Edge, Brave, Vivaldi, Opera, Arc, Chromium, Firefox and Safari. Importing the same browser twice adds nothing rather than doubling what is there. Bookmarks import from an exported HTML or JSON file.
+Settings → Application lists every browser profile on the machine with a page count and an Import button: Chrome, Edge, Brave, Vivaldi, Opera, Arc, Chromium, Firefox and Safari. Importing the same browser twice adds nothing rather than doubling what is there. Bookmarks import from an exported HTML or JSON file.
 
 ### Sync and your data
 

@@ -3,7 +3,7 @@
 All notable changes to Arcwel WebDeck are recorded here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## v0.1.7 — 2026-09-24
 
 ### Changed
 
