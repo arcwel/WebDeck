@@ -37,8 +37,14 @@ try {
 
 // Vendor the js-debug DAP server (task 12.4). Separate script so it can also
 // be re-run on its own: `node scripts/fetch-js-debug.mjs`.
-try {
-  execSync('node scripts/fetch-js-debug.mjs', { stdio: 'inherit' })
-} catch {
-  // Already warned by the script itself; never fail the install for it.
+// WEBDECK_SKIP_BINARIES=1 skips the download outright, for offline or
+// unattended runners where even attempting it can stall on a dropped connection.
+if (process.env.WEBDECK_SKIP_BINARIES === '1') {
+  console.log('js-debug: WEBDECK_SKIP_BINARIES=1, not downloading')
+} else {
+  try {
+    execSync('node scripts/fetch-js-debug.mjs', { stdio: 'inherit' })
+  } catch {
+    // Already warned by the script itself; never fail the install for it.
+  }
 }

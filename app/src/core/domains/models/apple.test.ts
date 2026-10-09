@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, afterAll } from 'vitest'
+import { describe, it, expect, afterAll, beforeAll } from 'vitest'
 import { chmodSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -63,9 +63,34 @@ process.stdin.on('end', () => { console.log(JSON.stringify({ t: 'thinking' })); 
 `
 )
 
-const onlyOnMac = process.platform === 'darwin' ? describe : describe.skip
+// The fake helper is a Node script, so everything below runs on any OS. Only
+// probe() gates on macOS; pin the platform for this block so the spawn-and-parse
+// path is exercised on Linux CI too, and pin the real gate separately below.
+function withPlatform(platform: NodeJS.Platform): void {
+  const real = Object.getOwnPropertyDescriptor(process, 'platform')!
+  beforeAll(() => Object.defineProperty(process, 'platform', { ...real, value: platform }))
+  afterAll(() => Object.defineProperty(process, 'platform', real))
+}
 
-onlyOnMac('AppleProvider', () => {
+describe('AppleProvider off macOS', () => {
+  withPlatform('linux')
+
+  it('reports macOS-only and offers nothing, without running the helper', async () => {
+    const p = new AppleProvider(() => {
+      throw new Error('the helper must not be consulted off macOS')
+    })
+    expect(await p.status()).toMatchObject({
+      installed: false,
+      running: false,
+      detail: 'macOS 26 only'
+    })
+    expect(await p.listModels()).toEqual([])
+  })
+})
+
+describe('AppleProvider', () => {
+  withPlatform('darwin')
+
   it('reports available and offers one Ask-only model', async () => {
     const p = new AppleProvider(() => available)
     expect(await p.status()).toMatchObject({
