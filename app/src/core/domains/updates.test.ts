@@ -363,6 +363,7 @@ describe('Update now', () => {
   }
   const mac = process.platform === 'darwin'
 
+  // Skipped off macOS: zips, unpacks and checks xattrs with /usr/bin/ditto and /usr/bin/xattr.
   it.skipIf(!mac)(
     'downloads the build for this machine, checks its digest, unpacks it and reveals the app',
     async () => {
